@@ -1,6 +1,6 @@
 
-from ecbf.sys.sim import Simulator
-from ecbf.models.mass_spring import MassSpring
+from ecbf.scripts.sim import Simulator
+from ecbf.defined_models.mass_spring import MassSpring
 
 # Define the system parameters
 m = 1

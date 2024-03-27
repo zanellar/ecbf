@@ -11,7 +11,8 @@ x = np.linspace(-20, 20, 400)
 y = np.linspace(-20, 20, 400)
 x, y = np.meshgrid(x, y)
 
-z = -(x**2 + y**2 - C2**2) * (x**2 + y**2 - C1**2)
+z = -(x**2 + y**2 + y - C2**2) * (x**2 + y**2 + y - C1**2) 
+ 
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')

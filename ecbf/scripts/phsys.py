@@ -53,25 +53,24 @@ class PHSystemCanonic():
         # Define the gradient of the Hamiltonian 
         dHdq = sp.diff(self.H, q)
         dHdp = sp.diff(self.H, p)
-        dH = sp.Matrix([dHdq, dHdp]) 
+        self._dH = sp.Matrix([dHdq, dHdp]) 
+        self.dH = lambdify([q, p], self._dH)
 
-        # Define the state transition matrix F
-        F = sp.Matrix([[0, 1], [-1, -self.D]])
-        self.F = F
+        # Define the state transition matrix F 
+        self.F = np.array([[0, 1], [-1, -self.D]])
 
-        # Define the input matrix G
-        G = sp.Matrix([[0], [self.B]])
-        self.G = G
-
-        # Define the system equations
-        dx = F @ dH
-        y = G.T @ dH
-
-        # Define the system as a function
-        self._system = lambdify([x], dx)
-        self._output = lambdify([x], y)
-
+        # Define the input matrix G 
+        self.G = np.array([[0], [self.B]])
     
+    def dynamics(self, x, u):
+        '''
+        This function returns the dynamics of the system.
+        ''' 
+
+        dx = self.F @ self.dH(x[0], x[1]) + self.G @ u
+
+        return dx    
+
     def reset(self):
         '''
         This function resets the system.
@@ -82,22 +81,37 @@ class PHSystemCanonic():
         '''
         This function integrates the system using the Runge-Kutta 4th order method.
         '''
-        state_shape = np.array(x).shape  
+        state_shape = np.array(x).shape   
 
-        k1 = self._system(x).reshape(state_shape)
-        k2 = self._system(x + self.dt/2 * k1).reshape(state_shape) 
-        k3 = self._system(x + self.dt/2 * k2).reshape(state_shape) 
-        k4 = self._system(x + self.dt * k3).reshape(state_shape) 
+        k1 = self.dynamics(x, u)
+        k1 = k1.reshape(state_shape) 
+
+        k2 = self.dynamics(x + self.dt/2 * k1, u)
+        k2 = k2.reshape(state_shape)
+
+        k3= self.dynamics(x + self.dt/2 * k2, u)
+        k3 = k3.reshape(state_shape)
+
+        k4 = self.dynamics(x + self.dt * k3, u)
+        k4 = k4.reshape(state_shape)
+
         x_next = x + self.dt/6 * (k1 + 2*k2 + 2*k3 + k4) 
+
         return x_next
     
     def step(self, x, u):
         '''
         This function performs one step of the system.
         '''
-        x_next = self._integrate_rk4(x, u)
-        y = self._output(x)
+
+        u = np.array(u).reshape(self.num_inputs, 1)
+
+        # Integrate the system
+        x_next = self._integrate_rk4(x, u) 
+        y = self.G.T @ self.dH(x_next[0], x_next[1])
+
         if self.verbose:
             print(f'q: {x_next[0]}')
             print(f'p: {x_next[1]}')
+
         return x_next, y

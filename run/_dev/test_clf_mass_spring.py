@@ -1,10 +1,8 @@
-import tkinter as tk 
-import matplotlib.pyplot as plt
-
+import tkinter as tk
 from ecbf.defined_models.mass_spring import MassSpring
-from ecbf.barrier_functions.safe_doughnut import SafeDoughnut
-from ecbf.barrier_functions.safe_circle import SafeCircle
 from ecbf.scripts.control import Controller
+from ecbf.lyapunov_functions.quadratic import Quadratic
+import matplotlib.pyplot as plt
 
 # Create a new Tk root widget
 root = tk.Tk()
@@ -49,7 +47,11 @@ u_min_slider.pack()
 cbf_gamma_slider = tk.Scale(root, from_=0, to=10, resolution=0.1, orient='horizontal', label='CBF Gamma')
 cbf_gamma_slider.set(3)
 cbf_gamma_slider.pack()
- 
+
+cbf_gamma0_slider = tk.Scale(root, from_=0, to=10, resolution=0.1, orient='horizontal', label='CBF Gamma0')
+cbf_gamma0_slider.set(1)
+cbf_gamma0_slider.pack()
+
 # Create a button to run the controller
 def run_controller():
 
@@ -67,23 +69,23 @@ def run_controller():
         'clf_lambda': clf_lambda_slider.get(), 
         'u_max': u_max_slider.get(),
         'u_min': u_min_slider.get(), 
-        'cbf_gamma': cbf_gamma_slider.get(), 
+        'cbf_gamma': cbf_gamma_slider.get(),
+        'cbf_gamma0': cbf_gamma0_slider.get(),
     } 
 
     model = MassSpring(m=1, k=0.5, dt=parameter["time_step"], verbose=False)
 
-    # cbf = SafeDoughnut(C1=20, C2=10) 
-    cbf = SafeCircle(C=10)  
- 
+    clf = Quadratic()
+
     ctrl = Controller(
         model, 
-        parameter,  
-        cbf=cbf.function
+        parameter, 
+        clf=clf.function 
     )
 
     ctrl.run()
 
-    ctrl.plot_phase_trajectory(show_safe_set=True)
+    ctrl.plot_phase_trajectory()
  
 
 run_button = tk.Button(root, text="Run Controller", command=run_controller)

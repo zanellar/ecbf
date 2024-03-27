@@ -158,7 +158,7 @@ class clf_cbf_dubins():
 
         self.lf_cbf_symbolic = dx_cbf @ self.f_symbolic
         self.lf_cbf = lambdify([self.state, self.obs_state], self.lf_cbf_symbolic)
-
+ 
         self.lg_cbf_symbolic = dx_cbf @ self.g_symbolic
         self.lg_cbf = lambdify([self.state, self.obs_state], self.lg_cbf_symbolic)
 
@@ -178,8 +178,7 @@ class clf_cbf_dubins():
         f2 = self.dynamic(current_state + dt * f1 / 2, u).T[0]
         f3 = self.dynamic(current_state + dt * f2 / 2, u).T[0]
         f4 = self.dynamic(current_state + dt * f3, u).T[0]
-
-        print(f1.shape,f2.shape,f3.shape,f4.shape )
+ 
         next_state = current_state + dt / 6 * (f1 + 2 * f2 + 2 * f3 + f4)
         return next_state
 
@@ -215,6 +214,9 @@ class clf_cbf_dubins():
         self.opti.subject_to(lf_clf + (lg_clf @ self.u)[0][0] + self.clf_lambda * clf - self.slack <= 0)
 
         # Lfh + Lgh * u + gamma * h >= 0
+        print(lg_cbf, self.u)
+        exit()
+
         self.opti.subject_to(lf_cbf + (lg_cbf @ self.u)[0][0] + self.cbf_gamma * cbf >= 0)
 
         # optimize the Qp problem

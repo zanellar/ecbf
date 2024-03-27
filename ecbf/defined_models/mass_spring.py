@@ -1,5 +1,5 @@
 
-from ecbf.sys.phsys import PHSystemCanonic
+from ecbf.scripts.phsys import PHSystemCanonic
 
 class MassSpring(PHSystemCanonic):
     def __init__(self, m, k, dt, verbose=False):
