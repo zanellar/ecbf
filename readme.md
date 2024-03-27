@@ -15,4 +15,6 @@ Install Package
 pip install -e .
 ```
 
+## TODO
+[] probably not working for non-scalar systems (e.g. q.shape = (2,1))
  

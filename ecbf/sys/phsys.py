@@ -38,8 +38,8 @@ class PHSystemCanonic():
         self.verbose = verbose
 
         # State shape 
-        self.num_states = 1 if np.array(D).ndim < 1 else np.array(D).shape[0]  # Number of states
-        self.num_inputs = 1 if np.array(B).ndim < 1 else np.array(B).shape[1]  # Number of inputs
+        self.num_states = 2 if np.array(D).ndim < 1 else np.array(D).shape[0]*2  # Number of states
+        self.num_inputs = 1 if np.array(B).ndim < 1 else np.array(B).shape[1]    # Number of inputs
 
         # Define the symbolic variables
         q, p = sp.symbols('q p')
