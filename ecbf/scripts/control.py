@@ -90,45 +90,49 @@ class Controller():
         
         ########### CLF ###########
 
-        self._clf = clf 
+        self.clf_tool = clf 
+        if clf is not None:
+            self._clf = clf.function
 
-        if self._clf is not None: 
+        if self.clf_tool is not None: 
 
             _clf = self._clf(self._state, self._target_state)
             self.clf = lambdify([self._state, self._target_state], _clf)
             
             # Derivative of CLF w.r.t the state x
-            dx_clf = sp.Matrix([_clf]).jacobian(self._state).T
-            dx_H = sp.Matrix([self.model.H]).jacobian(self._state).T
+            _dx_clf = sp.Matrix([_clf]).jacobian(self._state).T
+            _dx_H = sp.Matrix([self.model._H]).jacobian(self._state).T
  
             # Lie derivatives of CLF  w.r.t f(x)=F*dHdx(x)
-            self._dLie_f_clf = dx_clf.T @ self.model.F @ dx_H
+            self._dLie_f_clf = _dx_clf.T @ self.model._F @ _dx_H
 
             # Lie derivatives of CLF  w.r.t g(x)=G
-            self._dLie_g_clf = dx_clf.T @ self.model.G 
+            self._dLie_g_clf = _dx_clf.T @ self.model._G 
 
             # Make the symbolic functions callable
             self.dLie_f_clf = lambdify([self._state, self._target_state], self._dLie_f_clf)
             self.dLie_g_clf = lambdify([self._state, self._target_state], self._dLie_g_clf)
 
         ########### CBF ###########
- 
-        self._cbf = cbf
 
-        if self._cbf is not None:
+        self.cbf_tool = cbf
+        if cbf is not None:
+            self._cbf = cbf.function
+
+        if self.cbf_tool is not None:
 
             _cbf = self._cbf(self._state)
             self.cbf = lambdify([self._state], _cbf)
  
             # Derivative of CBF w.r.t the state x
-            dx_cbf = sp.Matrix([_cbf]).jacobian(self._state).T
-            dx_H = sp.Matrix([self.model.H]).jacobian(self._state).T
+            _dx_cbf = sp.Matrix([_cbf]).jacobian(self._state).T
+            _dx_H = sp.Matrix([self.model._H]).jacobian(self._state).T
               
             # Lie derivatives of CBF  w.r.t f(x)=F*dHdx(x)
-            self._dLie_f_cbf = dx_cbf.T @ self.model.F @ dx_H
+            self._dLie_f_cbf = _dx_cbf.T @ self.model._F @ _dx_H
 
             # Lie derivatives of CBF  w.r.t g(x)=G
-            self._dLie_g_cbf = dx_cbf.T @ self.model.G 
+            self._dLie_g_cbf = _dx_cbf.T @ self.model._G 
 
             # Make the symbolic functions callable
             self.dLie_f_cbf = lambdify([self._state], self._dLie_f_cbf)
@@ -181,8 +185,8 @@ class Controller():
                 use_slack = True
 
         # objective function
-        self.H = self.weight_input * np.eye(self.control_dim)
-        self.obj = .5 * (self.u - u_ref).T @ self.H @ (self.u - u_ref)
+        self.W = self.weight_input * np.eye(self.control_dim)
+        self.obj = .5 * (self.u - u_ref).T @ self.W @ (self.u - u_ref)
         if use_slack:
             self.obj = self.obj + self.weight_slack * self.slack ** 2
 
@@ -197,7 +201,7 @@ class Controller():
  
         # CLF constraint
         clf = None
-        if self._clf is not None:
+        if self.clf_tool is not None:
             clf = self.clf(current_state, self.target_state)
             dLie_f_clf = self.dLie_f_clf(current_state, self.target_state)
             dLie_g_clf = self.dLie_g_clf(current_state, self.target_state)
@@ -213,7 +217,7 @@ class Controller():
 
         # CBF constraint
         cbf = None
-        if self._cbf is not None:
+        if self.cbf_tool is not None:
             cbf = self.cbf(current_state)
             dLie_f_cbf = self.dLie_f_cbf(current_state)
             dLie_g_cbf = self.dLie_g_cbf(current_state)
@@ -248,22 +252,12 @@ class Controller():
 
         for t in range(self.time_steps):
 
-            self.model.q = self.current_state[0]
-            self.model.p = self.current_state[1]
-            H = self.model.K() + self.model.V() 
-            self.closeloop_energy_t[:, t] = H
-
-            self.model.q = self.current_state[0] + self.target_state[0]
-            self.model.p = self.current_state[1] + self.target_state[1]
-            H = self.model.K() + self.model.V() 
-            self.openloop_energy_t[:, t] = H
-
             if t % 100 == 0:
                 print(f't = {t}')
 
             u_ref = np.array([0])
             u, delta, clf, cbf, self.feas = self.solve_qp(self.current_state, u_ref, t)
-            print(f't = {t}, u = {u}, delta = {delta}, clf = {clf}, cbf = {cbf}') 
+            # print(f't = {t}, u = {u}, delta = {delta}, clf = {clf}, cbf = {cbf}') 
 
             if not self.feas:
                 print('\nThis problem is infeasible!\n') 
@@ -276,6 +270,15 @@ class Controller():
             self.slackt[:, t] = delta
             self.clf_t[:, t] = clf
             self.cbf_t[:, t] = cbf 
+
+            # Compute the energy of the open-loop system 
+            H = self.model.get_energy(self.current_state + self.target_state) 
+            self.openloop_energy_t[:, t] = H
+
+            # Compute the energy of the closed-loop system 
+            H = self.model.get_energy(self.current_state)
+            self.closeloop_energy_t[:, t] = H
+
 
             self.current_state, current_output = self.model.step(self.current_state, u)
 
@@ -332,7 +335,7 @@ class Controller():
 
     #######################################################################################################################
 
-    def plot_energy_openloop(self, show=True, save=False, figure=None):
+    def plot_energy_openloop(self, show=True, save=False, figure=None, ylims=None):
         if figure is None:
             plt.figure()
         else:
@@ -343,9 +346,13 @@ class Controller():
 
         plt.grid() 
         plt.plot(t, energy, linewidth=3, color='b')
+ 
         plt.xlabel('Time')
         plt.ylabel('Open-loop Energy') 
-        plt.ylim([round(float(min(energy)),3), round(float(max(energy)),3)])
+        if ylims is not None:
+            plt.ylim(ylims)
+        else:
+            plt.ylim([round(float(min(energy)),3), round(float(max(energy)),3)])
         #plt.title('Open-loop Energy')
 
         if show:
@@ -357,7 +364,7 @@ class Controller():
     
     #######################################################################################################################
 
-    def plot_energy_closeloop(self, show=True, save=False, figure=None):
+    def plot_energy_closeloop(self, show=True, save=False, figure=None, ylims=None):
         if figure is None:
             plt.figure()
         else:
@@ -368,9 +375,13 @@ class Controller():
 
         plt.grid() 
         plt.plot(t, energy, linewidth=3, color='b')
+ 
         plt.xlabel('Time')
         plt.ylabel('Closed-loop Energy') 
-        plt.ylim([round(float(min(energy)),3), round(float(max(energy)),3)])
+        if ylims is not None:
+            plt.ylim(ylims)
+        else:
+            plt.ylim([round(float(min(energy)),3), round(float(max(energy)),3)])
         #plt.title('Closed-loop Energy')
 
         if show:
@@ -414,7 +425,7 @@ class Controller():
         plt.text(q_traj[0], p_traj[0], '$x(0)$', verticalalignment='bottom', horizontalalignment='right')
         plt.text(q_traj[-1], p_traj[-1], '$x(T)$', verticalalignment='bottom', horizontalalignment='right')
          
-        if self._cbf is not None and add_safe_set: 
+        if self.cbf_tool is not None and add_safe_set: 
 
             # q_vals = np.linspace(min(self.xt[0])*2, max(self.xt[0])*2, 500)
             # p_vals = np.linspace(min(self.xt[1])*2, max(self.xt[1])*2, 500)

@@ -2,16 +2,20 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+
 import sympy as sp
 from sympy.abc import x, y
-from ecbf.utils.paths import PLOTS_PATH
 from sympy.utilities.lambdify import lambdify
 
-class SafeDoughnut:
+from ecbf.utils.paths import PLOTS_PATH
+from ecbf.scripts.basecbf import BaseCBF
+
+class SafeDoughnut(BaseCBF):
     def __init__(self, C1=20, C2=10): 
         '''
         This class represents provides a function that is greater than zero inside a doughnut shape with inner radius C2 and outer radius C1.
         '''
+        super().__init__()
         self.C1 = C1
         self.C2 = C2 
 

@@ -4,8 +4,9 @@ import matplotlib.pyplot as plt
 import sympy as sp
 from sympy.abc import x, y
 from ecbf.utils.paths import PLOTS_PATH 
-
-class Quadratic:
+from ecbf.scripts.baseclf import BaseCLF
+ 
+class Quadratic(BaseCLF):
 
     def __init__(self):  
         self.target = None

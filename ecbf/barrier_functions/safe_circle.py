@@ -4,23 +4,26 @@ import matplotlib.pyplot as plt
 import sympy as sp
 from sympy.abc import x, y
 from ecbf.utils.paths import PLOTS_PATH 
+from ecbf.scripts.basecbf import BaseCBF
 
-class SafeCircle:
-    def __init__(self, C=10): 
+class SafeCircle(BaseCBF):
+    def __init__(self, r=10, c=[0,0]): 
         '''
         This class represents provides a function that is greater than zero inside a circle with radius C.
         '''
-        self.C = C 
+        super().__init__()
+        self.r = r 
+        self.c = c
 
     def function(self, state):
-        x = state[0]
-        y = state[1]
-        _h = -(x**2 + y**2) + 0.01*y + self.C**2
+        x = state[0] - self.c[0]
+        y = state[1] - self.c[1]
+        _h = -(x**2 + y**2) + self.r**2
         return _h 
      
     def plot(self, op=1):
-        x_vals = np.linspace(-self.C*1.05, self.C*1.05, 500)
-        y_vals = np.linspace(-self.C*1.05, self.C*1.05, 500)
+        x_vals = np.linspace(-self.r*1.05, self.r*1.05, 500)
+        y_vals = np.linspace(-self.r*1.05, self.r*1.05, 500)
         x_vals, y_vals = np.meshgrid(x_vals, y_vals)
 
         z_vals = self.function([x_vals, y_vals])

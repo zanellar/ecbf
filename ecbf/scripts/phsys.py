@@ -32,8 +32,8 @@ class PHSystemCanonic():
         '''
         self.K = K
         self.V = V
-        self.D = D
-        self.B = B
+        self._D = D
+        self._B = B
         self.dt = dt
         self.verbose = verbose
 
@@ -48,26 +48,35 @@ class PHSystemCanonic():
         x = sp.Matrix([q, p]) 
 
         # Define the Hamiltonian
-        self.H = self.K() + self.V()
+        self._H = self.K() + self.V() 
+        print(self._H)
+        self.H = lambdify([q, p], self._H)
 
         # Define the gradient of the Hamiltonian 
-        dHdq = sp.diff(self.H, q)
-        dHdp = sp.diff(self.H, p)
-        self._dH = sp.Matrix([dHdq, dHdp]) 
+        _dHdq = sp.diff(self._H, q)
+        print(_dHdq)
+        _dHdp = sp.diff(self._H, p)
+        self._dH = sp.Matrix([_dHdq, _dHdp]) 
         self.dH = lambdify([q, p], self._dH)
 
         # Define the state transition matrix F 
-        self.F = np.array([[0, 1], [-1, -self.D]])
+        self._F = np.array([[0, 1], [-1, -self._D]])
 
         # Define the input matrix G 
-        self.G = np.array([[0], [self.B]])
+        self._G = np.array([[0], [self._B]])
+
+    def get_energy(self, x):
+        '''
+        This function returns the energy of the system.
+        ''' 
+        return self.H(x[0], x[1])
     
     def dynamics(self, x, u):
         '''
         This function returns the dynamics of the system.
         ''' 
 
-        dx = self.F @ self.dH(x[0], x[1]) + self.G @ u
+        dx = self._F @ self.dH(x[0], x[1]) + self._G @ u
 
         return dx    
 
@@ -108,7 +117,7 @@ class PHSystemCanonic():
 
         # Integrate the system
         x_next = self._integrate_rk4(x, u) 
-        y = self.G.T @ self.dH(x_next[0], x_next[1])
+        y = self._G.T @ self.dH(x_next[0], x_next[1])
 
         if self.verbose:
             print(f'q: {x_next[0]}')
