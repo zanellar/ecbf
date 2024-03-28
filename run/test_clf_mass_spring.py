@@ -36,13 +36,14 @@ weight_input_slider = tk.Scale(root, from_=0, to=10, resolution=0.1, orient='hor
 weight_input_slider.set(1)
 weight_input_slider.pack()
 
+clf_lambda_slider = tk.Scale(root, from_=0, to=1, resolution=0.01, orient='horizontal', label='CLF Lambda')
+clf_lambda_slider.set(0.1)
+clf_lambda_slider.pack()
+
 weight_slack_slider = tk.Scale(root, from_=0, to=10, resolution=0.1, orient='horizontal', label='Weight Slack')
 weight_slack_slider.set(0.1)
 weight_slack_slider.pack()
 
-clf_lambda_slider = tk.Scale(root, from_=0, to=1, resolution=0.01, orient='horizontal', label='CLF Lambda')
-clf_lambda_slider.set(0.1)
-clf_lambda_slider.pack()
 
 u_max_slider = tk.Scale(root, from_=0, to=100, resolution=1, orient='horizontal', label='U Max')
 u_max_slider.set(100)
@@ -98,9 +99,11 @@ def run_controller():
     ctrl.show(
         ctrl.plot_phase_trajectory, 
         ctrl.plot_state,
-        ctrl.plot_energy,
+        ctrl.plot_energy_openloop,
+        ctrl.plot_energy_closeloop,
         ctrl.plot_control,
-        subplots=(2, 2)
+        ctrl.plot_clf,
+        subplots=(3, 2) 
     ) 
 
  

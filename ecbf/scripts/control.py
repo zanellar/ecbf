@@ -70,7 +70,7 @@ class Controller():
 
         self.time_steps = int(np.ceil(self.T / self.dt)) 
         self.target_state = [0, 0] if self.target_state is None else np.array(self.target_state)
-        self.init_state = np.array(self.init_state) - self.target_state
+        self.init_state = np.array(self.init_state) - self.target_state # convert to error state
         self.current_state = self.init_state
 
         ########### Symbolic State ###########
@@ -78,8 +78,8 @@ class Controller():
         _x, _y = sp.symbols('x y')  # define symbolic representation
         self._state = sp.Matrix([_x, _y])  # row vector
 
-        _ex, _ey = sp.symbols('ex, ey,')
-        self._target_state = sp.Matrix([_ex, _ey])  # symbols
+        _xd, _yd = sp.symbols('xd yd')
+        self._target_state = sp.Matrix([_xd, _yd])  # row vector
  
         ########### Dynamics ###########
 
@@ -155,7 +155,8 @@ class Controller():
         self.slackt = np.zeros((1, self.time_steps))
         self.clf_t = np.zeros((1, self.time_steps))
         self.cbf_t = np.zeros((1, self.time_steps))
-        self.energy_t = np.zeros((1, self.time_steps))
+        self.openloop_energy_t = np.zeros((1, self.time_steps))
+        self.closeloop_energy_t = np.zeros((1, self.time_steps))
  
 
     #######################################################################################################################
@@ -250,7 +251,12 @@ class Controller():
             self.model.q = self.current_state[0]
             self.model.p = self.current_state[1]
             H = self.model.K() + self.model.V() 
-            self.energy_t[:, t] = H
+            self.closeloop_energy_t[:, t] = H
+
+            self.model.q = self.current_state[0] + self.target_state[0]
+            self.model.p = self.current_state[1] + self.target_state[1]
+            H = self.model.K() + self.model.V() 
+            self.openloop_energy_t[:, t] = H
 
             if t % 100 == 0:
                 print(f't = {t}')
@@ -293,6 +299,7 @@ class Controller():
                 plt.figure(i)
                 arg(show=False, save=save)
 
+        plt.tight_layout()
         plt.show()
 
     def plot_state(self, show=True, save=False, figure=None):
@@ -314,7 +321,7 @@ class Controller():
         plt.plot(t, q, 'k', linewidth=3, label='q', linestyle='-')
         plt.plot(t, p, 'b', linewidth=3, label='p', linestyle='-')
         plt.legend()
-        plt.title('State Variable')
+        #plt.title('State Variable')
         plt.ylabel('q, p')
 
         if show:
@@ -325,31 +332,57 @@ class Controller():
 
     #######################################################################################################################
 
-    def plot_energy(self, show=True, save=False, figure=None):
+    def plot_energy_openloop(self, show=True, save=False, figure=None):
         if figure is None:
             plt.figure()
         else:
             plt.sca(figure)
             
         t = np.arange(0, self.T, self.dt) 
-        energy = self.energy_t.flatten()
+        energy = self.openloop_energy_t.flatten()
 
         plt.grid() 
         plt.plot(t, energy, linewidth=3, color='b')
         plt.xlabel('Time')
-        plt.ylabel('Energy') 
+        plt.ylabel('Open-loop Energy') 
         plt.ylim([round(float(min(energy)),3), round(float(max(energy)),3)])
-        plt.title('Energy trajectory') 
- 
+        #plt.title('Open-loop Energy')
+
         if show:
             plt.show()
 
         if save:
-            plt.savefig(os.path.join(PLOTS_PATH, 'energy.png'), format='png', dpi=300)
+            plt.savefig(os.path.join(PLOTS_PATH, 'op_energy.png'), format='png', dpi=300)
+
+    
+    #######################################################################################################################
+
+    def plot_energy_closeloop(self, show=True, save=False, figure=None):
+        if figure is None:
+            plt.figure()
+        else:
+            plt.sca(figure)
+            
+        t = np.arange(0, self.T, self.dt) 
+        energy = self.closeloop_energy_t.flatten()
+
+        plt.grid() 
+        plt.plot(t, energy, linewidth=3, color='b')
+        plt.xlabel('Time')
+        plt.ylabel('Closed-loop Energy') 
+        plt.ylim([round(float(min(energy)),3), round(float(max(energy)),3)])
+        #plt.title('Closed-loop Energy')
+
+        if show:
+            plt.show()
+
+        if save:
+            plt.savefig(os.path.join(PLOTS_PATH, 'cl_energy.png'), format='png', dpi=300)
+
 
     #######################################################################################################################
 
-    def plot_phase_trajectory(self, add_safe_set=False, state_range=[-20, 20], show=True, save=False, figure=None):
+    def plot_phase_trajectory(self, add_safe_set=True, state_range=[-20, 20], show=True, save=False, figure=None):
         if figure is None:
             plt.figure()
         else:
@@ -381,7 +414,7 @@ class Controller():
         plt.text(q_traj[0], p_traj[0], '$x(0)$', verticalalignment='bottom', horizontalalignment='right')
         plt.text(q_traj[-1], p_traj[-1], '$x(T)$', verticalalignment='bottom', horizontalalignment='right')
          
-        if add_safe_set: 
+        if self._cbf is not None and add_safe_set: 
 
             # q_vals = np.linspace(min(self.xt[0])*2, max(self.xt[0])*2, 500)
             # p_vals = np.linspace(min(self.xt[1])*2, max(self.xt[1])*2, 500)
@@ -403,7 +436,7 @@ class Controller():
         plt.grid(True)
         plt.xlabel('q')
         plt.ylabel('p')
-        plt.title('Phase space trajectory')
+        #plt.title('Phase space trajectory')
         
         if show:
             plt.show()
@@ -424,8 +457,8 @@ class Controller():
         slack = self.slackt.flatten()
 
         plt.grid() 
-        plt.plot(t, slack, linewidth=3, color='orange')
-        plt.title('Slack')
+        plt.plot(t, slack, linewidth=3, color='b')
+        #plt.title('Slack')
         plt.ylabel('delta')
 
         if show:
@@ -447,8 +480,8 @@ class Controller():
         clf = self.clf_t.flatten()
 
         plt.grid()        
-        plt.plot(t, clf, linewidth=3, color='cyan')
-        plt.title('clf')
+        plt.plot(t, clf, linewidth=3, color='b')
+        #plt.title('clf')
         plt.ylabel('V(x)')
 
         if show:
@@ -469,8 +502,8 @@ class Controller():
         cbf = self.cbf_t.flatten()
 
         plt.grid()
-        plt.plot(t, cbf, linewidth=3, color='cyan')
-        plt.title('cbf')
+        plt.plot(t, cbf, linewidth=3, color='b')
+        #plt.title('cbf')
         plt.ylabel('h(x)')
 
         if show:
@@ -497,9 +530,8 @@ class Controller():
         if u_max is not None:
             plt.plot(t, u_max * np.ones(t.shape[0]), 'k', linewidth=3, label='Bound', linestyle='--')
             plt.plot(t, -u_max * np.ones(t.shape[0]), 'k', linewidth=3, linestyle='--') 
-        plt.title('State Variable')
         plt.ylabel('q, p') 
-        plt.title('control')
+        #plt.title('control')
         plt.ylabel('u')
         plt.legend(loc='upper left')
  
