@@ -33,11 +33,7 @@ weight_input_slider.pack()
 weight_slack_slider = tk.Scale(root, from_=0, to=10, resolution=0.1, orient='horizontal', label='Weight Slack')
 weight_slack_slider.set(0.5)
 weight_slack_slider.pack()
-
-clf_lambda_slider = tk.Scale(root, from_=0, to=1, resolution=0.01, orient='horizontal', label='CLF Lambda')
-clf_lambda_slider.set(0.2)
-clf_lambda_slider.pack()
-
+  
 u_max_slider = tk.Scale(root, from_=0, to=100, resolution=1, orient='horizontal', label='U Max')
 u_max_slider.set(50)
 u_max_slider.pack()
@@ -64,7 +60,7 @@ def run_controller():
         'target_state': [0, 0],
         'weight_input': weight_input_slider.get(),
         'weight_slack': weight_slack_slider.get(),
-        'clf_lambda': clf_lambda_slider.get(), 
+        'clf_lambda': None, 
         'u_max': u_max_slider.get(),
         'u_min': u_min_slider.get(), 
         'cbf_gamma': cbf_gamma_slider.get(), 
@@ -83,7 +79,7 @@ def run_controller():
 
     ctrl.run()
 
-    ctrl.plot_phase_trajectory(show_safe_set=True)
+    ctrl.plot_phase_trajectory(add_safe_set=True)
  
 
 run_button = tk.Button(root, text="Run Controller", command=run_controller)

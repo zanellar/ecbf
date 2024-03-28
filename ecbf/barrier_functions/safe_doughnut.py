@@ -18,7 +18,7 @@ class SafeDoughnut:
     def function(self, state):
         x = state[0]
         y = state[1]
-        _h = -(x**2 + y**2 + 0.1*y - self.C2**2) * (x**2 + y**2 + 0.1*y - self.C1**2)  
+        _h = -(x**2 + y**2 - self.C2**2) * (x**2 + y**2  - self.C1**2)  + 0.1*y
         return _h 
      
     def plot(self, op=1):
