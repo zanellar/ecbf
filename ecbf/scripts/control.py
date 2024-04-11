@@ -10,7 +10,7 @@ import matplotlib.animation as animation
 import matplotlib.patches as mpatches
 from sympy.utilities.lambdify import lambdify
 
-from ecbf.utils.paths import PLOTS_PATH
+from ecbf.utils.paths import PLOTS_PATH, RES_PATH
 
 class Controller():
 
@@ -69,6 +69,7 @@ class Controller():
         # ------------------------------------
 
         self.time_steps = int(np.ceil(self.T / self.dt)) 
+        self.no_target_defined = True if self.target_state is None else False
         self.target_state = [0, 0] if self.target_state is None else np.array(self.target_state)
         self.init_state = np.array(self.init_state) - self.target_state # convert to error state
         self.current_state = self.init_state
@@ -215,6 +216,10 @@ class Controller():
             else:
                 print(f'No control input in the CLF constraint at t = {t}!')
 
+
+        # sigma = 1 # TODO
+        # beta = 1-np.exp(-self.current_state[1]**2/sigma) 
+
         # CBF constraint
         cbf = None
         if self.cbf_tool is not None:
@@ -227,15 +232,18 @@ class Controller():
 
         # optimize the Qp problem
         try:
+
             sol = self.opti.solve()
             self.feasible = True
             optimal_control = sol.value(self.u) 
+            
             if use_slack:
                 slack = sol.value(self.slack)
             else:
                 slack = None
 
             return optimal_control, slack, clf, cbf, self.feasible
+        
         except:
 
             print(self.opti.return_status())
@@ -248,14 +256,19 @@ class Controller():
     #######################################################################################################################
     #######################################################################################################################
         
-    def run(self):
+    def run(self, u_ref=[0], save= False, name=''):
+        '''
+        Run the controller and solve the QP problem at each time step.  
+
+        :param u_ref: reference control input
+        '''
 
         for t in range(self.time_steps):
 
             if t % 100 == 0:
                 print(f't = {t}')
 
-            u_ref = np.array([0])
+            u_ref = np.array(u_ref)
             u, delta, clf, cbf, self.feas = self.solve_qp(self.current_state, u_ref, t)
             # print(f't = {t}, u = {u}, delta = {delta}, clf = {clf}, cbf = {cbf}') 
 
@@ -279,10 +292,21 @@ class Controller():
             H = self.model.get_energy(self.current_state)
             self.closeloop_energy_t[:, t] = H
 
-
             self.current_state, current_output = self.model.step(self.current_state, u)
 
         print('Finish the solve of qp with clf!')
+
+        # Save all the data in RES_PATH
+        if save:
+            np.save(os.path.join(RES_PATH, f'{name}_xt.npy'), self.xt)
+            np.save(os.path.join(RES_PATH, f'{name}_ut.npy'), self.ut)
+            np.save(os.path.join(RES_PATH, f'{name}_slackt.npy'), self.slackt)
+            np.save(os.path.join(RES_PATH, f'{name}_clf_t.npy'), self.clf_t)
+            np.save(os.path.join(RES_PATH, f'{name}_cbf_t.npy'), self.cbf_t)
+            np.save(os.path.join(RES_PATH, f'{name}_openloop_energy_t.npy'), self.openloop_energy_t)
+            np.save(os.path.join(RES_PATH, f'{name}_closeloop_energy_t.npy'), self.closeloop_energy_t)
+
+
 
 
     #######################################################################################################################
@@ -305,7 +329,79 @@ class Controller():
         plt.tight_layout()
         plt.show()
 
-    def plot_state(self, show=True, save=False, figure=None):
+    #######################################################################################################################
+
+    def plot_phase_trajectory(self, add_safe_set=True, plot_end_state = True, state_range=[-20, 20], show=True, save=False, figure=None, name = '', color='blue', arrow_skip=10, arrow_clif=0):
+        if figure is None:
+            plt.figure()
+        else:
+            plt.sca(figure) 
+
+        q_traj = [q for q in self.xt[0]]  
+        p_traj = [p for p in self.xt[1]] 
+
+        # Convert from error state 
+        q_traj = np.array(q_traj) + self.target_state[0]
+        p_traj = np.array(p_traj) + self.target_state[1]
+  
+        # Plot the phase trajectory
+        plt.plot(q_traj, p_traj, color=color, label=name)
+
+        # Add arrows to indicate the direction of motion
+        for i in range(0, len(q_traj) - 1, arrow_skip):  # Stop one step earlier
+            if i>arrow_clif:
+                plt.annotate('', xy=(q_traj[i+1], p_traj[i+1]), xytext=(q_traj[i], p_traj[i]),
+                            arrowprops=dict(facecolor=color, edgecolor=color, arrowstyle='Simple,tail_width=0.5,head_width=0.5,head_length=0.5'))    
+                       
+        # Plot the initial and final with a higher z-order without a label
+        plt.scatter([q_traj[0]], [p_traj[0]], color='black', zorder=5)
+        if plot_end_state:
+            plt.scatter([q_traj[-1]], [p_traj[-1]], marker='o', facecolors='none', edgecolors='black', zorder=5 , color=color)
+
+        # Plot the target state with a star
+        if self.no_target_defined is False:
+            plt.scatter(self.target_state[0], self.target_state[1], marker='*', color='black', label='Target state', zorder=5)
+
+        # Add text close to the initial and final states with an offset
+        plt.text(q_traj[0], p_traj[0], '$x(0)$', verticalalignment='bottom', horizontalalignment='right')
+        if plot_end_state:
+            plt.text(q_traj[-1], p_traj[-1], '$x(T)$', verticalalignment='bottom', horizontalalignment='right', color=color)
+         
+        if self.cbf_tool is not None and add_safe_set: 
+
+            # q_vals = np.linspace(min(self.xt[0])*2, max(self.xt[0])*2, 500)
+            # p_vals = np.linspace(min(self.xt[1])*2, max(self.xt[1])*2, 500)
+            q_vals = np.linspace(state_range[0], state_range[1], 500)
+            p_vals = np.linspace(state_range[0], state_range[1], 500)
+            q_vals, p_vals = np.meshgrid(q_vals, p_vals) 
+
+            cbf_vals = self._cbf([q_vals, p_vals])
+
+            # Plot the 2D contour 
+            plt.contour(q_vals, p_vals, cbf_vals, levels=[0], colors='black', linewidths=5, alpha=0.3) 
+
+            # Fill the areas where the function is over the plane in grey and under the plane in white
+            plt.contourf(q_vals, p_vals, cbf_vals, levels=[-np.inf, 0], colors='grey', alpha=0.3)
+ 
+        if not self.feas:
+            plt.text(0, 0, 'Infeasible', verticalalignment='bottom', horizontalalignment='right', color='red', fontsize=18)
+
+        plt.grid(True)
+        plt.xlabel('q [m]')
+        plt.ylabel('p [m]')
+        #plt.title('Phase space trajectory')
+        
+        if show:
+            plt.show()
+
+        if save:
+            file_name = 'phase_trajectory.png' if name == '' else f'phase_trajectory_{name}.png'
+            plt.savefig(os.path.join(PLOTS_PATH, file_name), format='png', dpi=300)  
+
+  
+    #######################################################################################################################
+
+    def plot_state(self, show=True, save=False, figure=None, name = '', color='blue'):
         if figure is None:
             plt.figure()
         else:
@@ -320,22 +416,25 @@ class Controller():
         q = np.array(q) + self.target_state[0]
         p = np.array(p) + self.target_state[1]
 
-        plt.grid() 
-        plt.plot(t, q, 'k', linewidth=3, label='q', linestyle='-')
-        plt.plot(t, p, 'b', linewidth=3, label='p', linestyle='-')
-        plt.legend()
+        plt.plot(t, q, linewidth=3, label='q'+name, linestyle='-', color=color)
+        plt.plot(t, p,  linewidth=3, label='p'+name, linestyle='--', color=color)
+
+        # plt.legend()
+        plt.grid(True)
         #plt.title('State Variable')
-        plt.ylabel('q, p')
+        plt.ylabel('q, p [m]')
+        plt.xlabel('time [s]')
 
         if show:
             plt.show()
 
         if save:
-            plt.savefig(os.path.join(PLOTS_PATH, 'state.png'), format='png', dpi=300)
+            file_name = 'state.png' if name == '' else f'state_{name}.png'
+            plt.savefig(os.path.join(PLOTS_PATH, file_name), format='png', dpi=300)
 
     #######################################################################################################################
 
-    def plot_energy_openloop(self, show=True, save=False, figure=None, ylims=None):
+    def plot_energy_openloop(self, show=True, save=False, figure=None, ylims=None, name = '', color='blue'):
         if figure is None:
             plt.figure()
         else:
@@ -344,11 +443,11 @@ class Controller():
         t = np.arange(0, self.T, self.dt) 
         energy = self.openloop_energy_t.flatten()
 
-        plt.grid() 
-        plt.plot(t, energy, linewidth=3, color='b')
+        plt.plot(t, energy, linewidth=3, color=color, label=name)
  
-        plt.xlabel('Time')
-        plt.ylabel('Open-loop Energy') 
+        plt.grid(True) 
+        plt.xlabel('time [s]')
+        plt.ylabel('H [J]') 
         if ylims is not None:
             plt.ylim(ylims)
         else:
@@ -359,12 +458,13 @@ class Controller():
             plt.show()
 
         if save:
-            plt.savefig(os.path.join(PLOTS_PATH, 'op_energy.png'), format='png', dpi=300)
+            file_name = 'op_energy.png' if name == '' else f'op_energy_{name}.png'
+            plt.savefig(os.path.join(PLOTS_PATH, file_name), format='png', dpi=300) 
 
     
     #######################################################################################################################
 
-    def plot_energy_closeloop(self, show=True, save=False, figure=None, ylims=None):
+    def plot_energy_closeloop(self, show=True, save=False, figure=None, ylims=None, name = '', color='blue'):
         if figure is None:
             plt.figure()
         else:
@@ -373,11 +473,11 @@ class Controller():
         t = np.arange(0, self.T, self.dt) 
         energy = self.closeloop_energy_t.flatten()
 
-        plt.grid() 
-        plt.plot(t, energy, linewidth=3, color='b')
+        plt.plot(t, energy, linewidth=3, color=color, label=name)
  
-        plt.xlabel('Time')
-        plt.ylabel('Closed-loop Energy') 
+        plt.grid() 
+        plt.xlabel('time [s]')
+        plt.ylabel('H [J]') 
         if ylims is not None:
             plt.ylim(ylims)
         else:
@@ -388,77 +488,13 @@ class Controller():
             plt.show()
 
         if save:
-            plt.savefig(os.path.join(PLOTS_PATH, 'cl_energy.png'), format='png', dpi=300)
+            file_name = 'cl_energy.png' if name == '' else f'cl_energy_{name}.png'
+            plt.savefig(os.path.join(PLOTS_PATH, file_name), format='png', dpi=300)  
 
 
     #######################################################################################################################
 
-    def plot_phase_trajectory(self, add_safe_set=True, state_range=[-20, 20], show=True, save=False, figure=None):
-        if figure is None:
-            plt.figure()
-        else:
-            plt.sca(figure) 
-
-        q_traj = [q for q in self.xt[0]]  
-        p_traj = [p for p in self.xt[1]] 
-
-        # Convert from error state 
-        q_traj = np.array(q_traj) + self.target_state[0]
-        p_traj = np.array(p_traj) + self.target_state[1]
-  
-        # Plot the phase trajectory
-        plt.plot(q_traj, p_traj, color='black')
-
-        # Add arrows to indicate the direction of motion
-        for i in range(0, len(q_traj) - 1, 5):  # Stop one step earlier
-            plt.quiver(q_traj[i], p_traj[i], q_traj[i+1]-q_traj[i], p_traj[i+1]-p_traj[i], angles='xy', scale_units='xy', scale=1, color='black')
-
-        # Plot the initial and final with a higher z-order
-        plt.scatter([q_traj[0]], [p_traj[0]], color='green', label='Initial state', zorder=5)
-        plt.scatter([q_traj[-1]], [p_traj[-1]], marker='o', facecolors='none', edgecolors='red', label='Final state', zorder=5)
-
-        # Plot the target state with a star
-        if self.target_state is not None:
-            plt.scatter(self.target_state[0], self.target_state[1], marker='*', color='red', label='Target state', zorder=5)
-
-        # Add text close to the initial and final states with an offset
-        plt.text(q_traj[0], p_traj[0], '$x(0)$', verticalalignment='bottom', horizontalalignment='right')
-        plt.text(q_traj[-1], p_traj[-1], '$x(T)$', verticalalignment='bottom', horizontalalignment='right')
-         
-        if self.cbf_tool is not None and add_safe_set: 
-
-            # q_vals = np.linspace(min(self.xt[0])*2, max(self.xt[0])*2, 500)
-            # p_vals = np.linspace(min(self.xt[1])*2, max(self.xt[1])*2, 500)
-            q_vals = np.linspace(state_range[0], state_range[1], 500)
-            p_vals = np.linspace(state_range[0], state_range[1], 500)
-            q_vals, p_vals = np.meshgrid(q_vals, p_vals) 
-
-            cbf_vals = self._cbf([q_vals, p_vals])
-
-            # Plot the 2D contour 
-            plt.contour(q_vals, p_vals, cbf_vals, levels=[0], colors='blue') 
-
-            # Fill the areas where the function is over the plane in grey and under the plane in white
-            plt.contourf(q_vals, p_vals, cbf_vals, levels=[-np.inf, 0], colors='grey', alpha=0.3)
- 
-        if not self.feas:
-            plt.text(0, 0, 'Infeasible', verticalalignment='bottom', horizontalalignment='right', color='red', fontsize=18)
-
-        plt.grid(True)
-        plt.xlabel('q')
-        plt.ylabel('p')
-        #plt.title('Phase space trajectory')
-        
-        if show:
-            plt.show()
-
-        if save:
-            plt.savefig(os.path.join(PLOTS_PATH, 'phase_trajectory.png'), format='png', dpi=300)
- 
-
-    #######################################################################################################################
-
-    def plot_slack(self, show=True, save=False, figure=None):
+    def plot_slack(self, show=True, save=False, figure=None, name = ''):
         if figure is None:
             plt.figure()
         else:
@@ -476,12 +512,13 @@ class Controller():
             plt.show()
 
         if save:
-            plt.savefig(os.path.join(PLOTS_PATH, 'slack.png'), format='png', dpi=300)
+            file_name = 'slack.png' if name == '' else f'slack_{name}.png'
+            plt.savefig(os.path.join(PLOTS_PATH, file_name), format='png', dpi=300)  
                     
 
     #######################################################################################################################
 
-    def plot_clf(self, show=True, save=False, figure=None):
+    def plot_clf(self, show=True, save=False, figure=None, ylims=None, name = '', color='blue'):
         if figure is None:
             plt.figure()
         else:
@@ -490,20 +527,27 @@ class Controller():
         t = np.arange(0, self.T, self.dt)
         clf = self.clf_t.flatten()
 
-        plt.grid()        
-        plt.plot(t, clf, linewidth=3, color='b')
-        #plt.title('clf')
-        plt.ylabel('V(x)')
+        plt.plot(t, clf, linewidth=3, color=color , label=name)
 
+        #plt.title('clf')
+        plt.grid(True)
+        plt.ylabel('V')
+        plt.xlabel('time [s]')
+        if ylims is not None:
+            plt.ylim(ylims)
+        else:
+            plt.ylim([round(float(min(clf)),3), round(float(max(clf)),3)])
+ 
         if show:
             plt.show()
 
         if save:
-            plt.savefig(os.path.join(PLOTS_PATH, 'clf.png'), format='png', dpi=300)
+            file_name = 'clf.png' if name == '' else f'clf_{name}.png'
+            plt.savefig(os.path.join(PLOTS_PATH, file_name), format='png', dpi=300)  
 
     #######################################################################################################################
 
-    def plot_cbf(self, show=True, save=False, figure=None):
+    def plot_cbf(self, show=True, save=False, figure=None, ylims=None, name = '', color='blue'):
         if figure is None:
             plt.figure()
         else:
@@ -512,21 +556,28 @@ class Controller():
         t = np.arange(0, self.T, self.dt)
         cbf = self.cbf_t.flatten()
 
-        plt.grid()
-        plt.plot(t, cbf, linewidth=3, color='b')
+        plt.plot(t, cbf, linewidth=3, color=color, label=name)
+
         #plt.title('cbf')
-        plt.ylabel('h(x)')
+        plt.grid(True)
+        plt.ylabel('h')
+        plt.xlabel('time [s]')
+        if ylims is not None:
+            plt.ylim(ylims)
+        else:
+            plt.ylim([round(float(min(cbf)),3), round(float(max(cbf)),3)])
 
         if show:
             plt.show()
 
         if save:
-            plt.savefig(os.path.join(PLOTS_PATH, 'cbf.png'), format='png', dpi=300)
+            file_name = 'cbf.png' if name == '' else f'cbf_{name}.png'
+            plt.savefig(os.path.join(PLOTS_PATH, file_name), format='png', dpi=300)  
         
 
     #######################################################################################################################
 
-    def plot_control(self, show=True, save=False, figure=None):
+    def plot_control(self, show=True, save=False, figure=None, name = '', color='blue'):
         if figure is None:
             plt.figure()
         else:
@@ -537,12 +588,14 @@ class Controller():
         control = self.ut.flatten()
 
         plt.grid() 
-        plt.plot(t, control, 'b', linewidth=3, label='w', linestyle='-')
+        plt.plot(t, control, linewidth=3, label=name, linestyle='-', color=color)
         if u_max is not None:
             plt.plot(t, u_max * np.ones(t.shape[0]), 'k', linewidth=3, label='Bound', linestyle='--')
             plt.plot(t, -u_max * np.ones(t.shape[0]), 'k', linewidth=3, linestyle='--') 
-        plt.ylabel('q, p') 
+
+        plt.grid(True)
         #plt.title('control')
+        plt.xlabel('time [s]') 
         plt.ylabel('u')
         plt.legend(loc='upper left')
  
@@ -550,14 +603,15 @@ class Controller():
             plt.show()
 
         if save:
-            plt.savefig(os.path.join(PLOTS_PATH, 'control.png'), format='png', dpi=300)
+            file_name = 'control.png' if name == '' else f'control_{name}.png'
+            plt.savefig(os.path.join(PLOTS_PATH, file_name), format='png', dpi=300)  
 
         
     #######################################################################################################################
     #######################################################################################################################
     #######################################################################################################################
     
-    def animate_phase_trajectory(self, add_safe_set=False, state_range=[-20, 20], show=True, save=False):
+    def animate_phase_trajectory(self, add_safe_set=False, state_range=[-20, 20], show=True, save=False, name = ''):
         fig, ax = plt.subplots() 
         ax.set_xlabel('q')
         ax.set_ylabel('p')
@@ -610,5 +664,6 @@ class Controller():
             plt.show()
 
         if save:
-            ani.save(os.path.join(PLOTS_PATH, 'phase_trajectory.gif'), writer='imagemagick', fps=60)
+            file_name = 'phase_trajectory.gif' if name == '' else f'phase_trajectory_{name}.gif' 
+            ani.save(os.path.join(PLOTS_PATH, file_name), writer='imagemagick', fps=60)
 

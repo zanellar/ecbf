@@ -11,19 +11,20 @@ from ecbf.utils.paths import PLOTS_PATH
 from ecbf.scripts.basecbf import BaseCBF
 
 class SafeDoughnut(BaseCBF):
-    def __init__(self, C1=20, C2=10): 
+    def __init__(self, C1=20, C2=10, scaling=0.0001): 
         '''
         This class represents provides a function that is greater than zero inside a doughnut shape with inner radius C2 and outer radius C1.
         '''
         super().__init__()
         self.C1 = C1
-        self.C2 = C2 
+        self.C2 = C2    
+        self.scaling = scaling
 
     def function(self, state):
         x = state[0]
         y = state[1]
         _h = -(x**2 + y**2 - self.C2**2) * (x**2 + y**2  - self.C1**2)  + 0.1*y
-        return _h 
+        return _h * self.scaling
      
     def plot(self, op=1):
         x_vals = np.linspace(-self.C1*1.05, self.C1*1.05, 500)

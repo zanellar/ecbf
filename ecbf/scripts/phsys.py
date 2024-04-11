@@ -51,7 +51,7 @@ class PHSystemCanonic():
         self._H = self.K() + self.V() 
         print(self._H)
         self.H = lambdify([q, p], self._H)
-
+  
         # Define the gradient of the Hamiltonian 
         _dHdq = sp.diff(self._H, q)
         print(_dHdq)
@@ -65,6 +65,10 @@ class PHSystemCanonic():
         # Define the input matrix G 
         self._G = np.array([[0], [self._B]])
 
+        # Make Kinetic and Potential energy functions callable
+        self.K = lambdify([q, p], self.K())
+        self.V = lambdify([q, p], self.V())
+ 
     def get_energy(self, x):
         '''
         This function returns the energy of the system.

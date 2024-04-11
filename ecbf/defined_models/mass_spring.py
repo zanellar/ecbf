@@ -7,8 +7,7 @@ class MassSpring(PHSystemCanonic):
         This class implements a mass-spring system using SymPy. 
         The system is initialized with the following parameters:
         - m: mass of the system (float)
-        - k: spring constant (float)
-        - c: damping coefficient (float)
+        - k: spring constant (float) 
         - dt: sampling time for the integration (float)
         - verbose: if true, prints "q" and "p" every step
         '''
@@ -19,7 +18,7 @@ class MassSpring(PHSystemCanonic):
 
     def K(self): 
         # Kinetic energy
-        K = self.m/2 * self.p**2
+        K =1/(2 * self.m) * self.p**2
         return K
     
     def V(self):

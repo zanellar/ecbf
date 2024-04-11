@@ -6,16 +6,21 @@ from sympy.abc import x, y
 from ecbf.utils.paths import PLOTS_PATH 
 from ecbf.scripts.basecbf import BaseCBF
 
-class TotalEnergyLimit(BaseCBF):
-    def __init__(self, H_func, c): 
+class EnergyLimit(BaseCBF):
+    def __init__(self, energy_func, c, pump=False): 
         '''
         This class represents provides a function that is greater than zero inside a circle with radius C.
         '''
         super().__init__()
-        self.H = H_func 
+        self.energy_func = energy_func 
         self.c = c
 
+        self.pump = pump
+
     def function(self, state): 
-        _h = self.c - self.H(state[0], state[1])
+        if self.pump:
+            _h = self.energy_func(state[0], state[1]) - self.c
+        else:
+            _h = self.c - self.energy_func(state[0], state[1])
         return _h 
      

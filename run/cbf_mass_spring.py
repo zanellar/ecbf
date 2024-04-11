@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from ecbf.defined_models.mass_spring import MassSpring
 from ecbf.barrier_functions.safe_doughnut import SafeDoughnut
 from ecbf.barrier_functions.safe_circle import SafeCircle
-from ecbf.barrier_functions.total_energy_limit import TotalEnergyLimit
+from ecbf.barrier_functions.energy_limit import EnergyLimit
 from ecbf.scripts.control import Controller
  
 # close all figures
@@ -26,7 +26,7 @@ model = MassSpring(m=1, k=0.5, dt=parameter["time_step"], verbose=False)
 
 # cbf = SafeDoughnut(C1=20, C2=10) 
 # cbf = SafeCircle(r=10, c=[5, 0])  
-cbf = TotalEnergyLimit(H_func=model.H, c=5)
+cbf = EnergyLimit(H_func=model.H, c=5)
 
 ctrl = Controller(
     model, 

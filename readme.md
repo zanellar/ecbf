@@ -15,6 +15,11 @@ Install Package
 pip install -e .
 ```
 
+
+## Notes
+If the trajectory pass from p=0 (i.e. zero velocity) while it is out of the safe set, then the optimization fails.
+
+
 ## TODO
 [] probably not working for non-scalar systems (e.g. q.shape = (2,1))
  
