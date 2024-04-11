@@ -35,8 +35,10 @@ class Simulator():
             x, y = self.model.step(x, u)
             x_traj.append(x)
             y_traj.append(y)
-            K_traj.append(self.model.K())
-            V_traj.append(self.model.V())
+            q = x[0] if self.model.scalar else x[0:self.model.num_states//2]
+            p = x[1] if self.model.scalar else x[self.model.num_states//2:]
+            K_traj.append(self.model.K(q,p))
+            V_traj.append(self.model.V(q,p))
             print(f'step {i+1}/{n_steps}')
         return x_traj, y_traj
     
@@ -147,12 +149,10 @@ class Simulator():
         # Calculate the energy of each state
         energy_traj = []
         for state in state_traj:
-            q = state[0]
-            p = state[1]
-            state = np.array([q, p])
-            self.model.q = q
-            self.model.p = p
-            energy = self.model.K() + self.model.V()
+            q = state[0] if self.model.scalar else state[0:self.model.num_states//2]
+            p = state[1] if self.model.scalar else state[self.model.num_states//2:]
+            state = np.array([q, p]) 
+            energy = self.model.K(q,p) + self.model.V(q,p)
             energy_traj.append(energy) 
 
         # Plot the energy trajectory

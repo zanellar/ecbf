@@ -41,29 +41,42 @@ class PHSystemCanonic():
         self.num_states = 2 if np.array(D).ndim < 1 else np.array(D).shape[0]*2  # Number of states
         self.num_inputs = 1 if np.array(B).ndim < 1 else np.array(B).shape[1]    # Number of inputs
 
+        # Check if the system is scalar
+        self.scalar = True if np.array(D).ndim < 1 else False
+
         # Define the symbolic variables
-        q, p = sp.symbols('q p')
+        if self.scalar:
+            q, p = sp.symbols('q p')
+        else:
+            q = sp.Matrix(sp.symbols(f'q:{self.num_states//2}'))
+            p = sp.Matrix(sp.symbols(f'p:{self.num_states//2}'))
+
         self.q = q
         self.p = p
         x = sp.Matrix([q, p]) 
 
         # Define the Hamiltonian
         self._H = self.K() + self.V() 
-        print(self._H)
+        
         self.H = lambdify([q, p], self._H)
   
         # Define the gradient of the Hamiltonian 
         _dHdq = sp.diff(self._H, q)
-        print(_dHdq)
         _dHdp = sp.diff(self._H, p)
         self._dH = sp.Matrix([_dHdq, _dHdp]) 
         self.dH = lambdify([q, p], self._dH)
 
         # Define the state transition matrix F 
-        self._F = np.array([[0, 1], [-1, -self._D]])
+        if self.scalar:
+            self._F = np.array([[0, 1], [-1, -self._D]])
+        else:
+            self._F = np.block([[np.zeros((self.num_states//2, self.num_states//2)), np.eye(self.num_states//2)], [-np.eye(self.num_states//2), -np.array(self._D)]])
 
         # Define the input matrix G 
-        self._G = np.array([[0], [self._B]])
+        if self.scalar:
+            self._G = np.array([[0], [self._B]])
+        else:
+            self._G = np.block([[np.zeros((self.num_states//2, self.num_inputs))], [np.array(self._B)]])
 
         # Make Kinetic and Potential energy functions callable
         self.K = lambdify([q, p], self.K())
@@ -73,14 +86,26 @@ class PHSystemCanonic():
         '''
         This function returns the energy of the system.
         ''' 
-        return self.H(x[0], x[1])
+        q = x[0] if self.scalar else x[0:self.num_states//2]
+        p = x[1] if self.scalar else x[self.num_states//2:] 
+        return self.H(q,p)
     
     def dynamics(self, x, u):
         '''
         This function returns the dynamics of the system.
         ''' 
+        q = x[0] if self.scalar else x[0:self.num_states//2]
+        p = x[1] if self.scalar else x[self.num_states//2:] 
+        
+        # print("@@@@@@@@")
+        # print(q)
+        # print(p)
+        # print(self.dH(q,p))
+        # print(self._F)
+        # print(self._G)
+        # print(u)
 
-        dx = self._F @ self.dH(x[0], x[1]) + self._G @ u
+        dx = self._F @ self.dH(q,p) + self._G @ u
 
         return dx    
 
@@ -102,7 +127,7 @@ class PHSystemCanonic():
         k2 = self.dynamics(x + self.dt/2 * k1, u)
         k2 = k2.reshape(state_shape)
 
-        k3= self.dynamics(x + self.dt/2 * k2, u)
+        k3 = self.dynamics(x + self.dt/2 * k2, u)
         k3 = k3.reshape(state_shape)
 
         k4 = self.dynamics(x + self.dt * k3, u)
@@ -121,7 +146,9 @@ class PHSystemCanonic():
 
         # Integrate the system
         x_next = self._integrate_rk4(x, u) 
-        y = self._G.T @ self.dH(x_next[0], x_next[1])
+        q = x_next[0] if self.scalar else x_next[0:self.num_states//2]
+        p = x_next[1] if self.scalar else x_next[self.num_states//2:]
+        y = self._G.T @ self.dH(q,p)
 
         if self.verbose:
             print(f'q: {x_next[0]}')

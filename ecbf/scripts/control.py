@@ -76,11 +76,11 @@ class Controller():
 
         ########### Symbolic State ###########
   
-        _x, _y = sp.symbols('x y')  # define symbolic representation
-        self._state = sp.Matrix([_x, _y])  # row vector
+        _q, _p = sp.symbols('q p')  # define symbolic representation
+        self._state = sp.Matrix([_q, _p])  # row vector
 
-        _xd, _yd = sp.symbols('xd yd')
-        self._target_state = sp.Matrix([_xd, _yd])  # row vector
+        _qd, _pd = sp.symbols('qd pd')
+        self._target_state = sp.Matrix([_qd, _pd])  # row vector
  
         ########### Dynamics ###########
 
@@ -130,6 +130,12 @@ class Controller():
             _dx_H = sp.Matrix([self.model._H]).jacobian(self._state).T
               
             # Lie derivatives of CBF  w.r.t f(x)=F*dHdx(x)
+            print("@@@@@@@@@@@@@@@@@@@@@@2")
+            print("_cbf", _cbf)
+            print("_dx_cbf", _dx_cbf)
+            print("self.model._F",self.model._F)
+            print("self.model._H",self.model._H)
+            print("_dx_H",_dx_H)
             self._dLie_f_cbf = _dx_cbf.T @ self.model._F @ _dx_H
 
             # Lie derivatives of CBF  w.r.t g(x)=G
@@ -138,7 +144,9 @@ class Controller():
             # Make the symbolic functions callable
             self.dLie_f_cbf = lambdify([self._state], self._dLie_f_cbf)
             self.dLie_g_cbf = lambdify([self._state], self._dLie_g_cbf)
- 
+
+        self.cbf_constrant_value = None
+
         ########### Solver ###########
         opts_setting = {
             'ipopt.max_iter': 200,
@@ -160,6 +168,7 @@ class Controller():
         self.slackt = np.zeros((1, self.time_steps))
         self.clf_t = np.zeros((1, self.time_steps))
         self.cbf_t = np.zeros((1, self.time_steps))
+        self.cbf_ct = np.zeros((1, self.time_steps))
         self.openloop_energy_t = np.zeros((1, self.time_steps))
         self.closeloop_energy_t = np.zeros((1, self.time_steps))
  
@@ -227,7 +236,7 @@ class Controller():
             dLie_f_cbf = self.dLie_f_cbf(current_state)
             dLie_g_cbf = self.dLie_g_cbf(current_state)
 
-            # Lfh + Lgh * u + gamma * h >= 0
+            # Lfh + Lgh * u + gamma * h >= 0 
             self.opti.subject_to(dLie_f_cbf + dLie_g_cbf @ self.u + self.cbf_gamma * cbf >= 0)
 
         # optimize the Qp problem
@@ -241,11 +250,14 @@ class Controller():
                 slack = sol.value(self.slack)
             else:
                 slack = None
+                
+            if self.cbf_tool is not None:
+                self.cbf_constrant_value = dLie_f_cbf + dLie_g_cbf @ [[optimal_control]] + self.cbf_gamma * cbf
 
             return optimal_control, slack, clf, cbf, self.feasible
         
-        except:
-
+        except Exception as e:
+            print(e)
             print(self.opti.return_status())
             self.feasible = False
 
@@ -283,6 +295,7 @@ class Controller():
             self.slackt[:, t] = delta
             self.clf_t[:, t] = clf
             self.cbf_t[:, t] = cbf 
+            self.cbf_ct[:, t] = self.cbf_constrant_value
 
             # Compute the energy of the open-loop system 
             H = self.model.get_energy(self.current_state + self.target_state) 
@@ -331,7 +344,7 @@ class Controller():
 
     #######################################################################################################################
 
-    def plot_phase_trajectory(self, add_safe_set=True, plot_end_state = True, state_range=[-20, 20], show=True, save=False, figure=None, name = '', color='blue', arrow_skip=10, arrow_clif=0):
+    def plot_phase_trajectory(self, add_safe_set=True, plot_end_state = True, state_range=[-20, 20], show=True, save=False, figure=None, name = '', color='blue', arrow_skip=10, arrow_clif=np.inf, arrow_index=-1):
         if figure is None:
             plt.figure()
         else:
@@ -349,9 +362,9 @@ class Controller():
 
         # Add arrows to indicate the direction of motion
         for i in range(0, len(q_traj) - 1, arrow_skip):  # Stop one step earlier
-            if i>arrow_clif:
+            if i>arrow_clif or arrow_index == i:
                 plt.annotate('', xy=(q_traj[i+1], p_traj[i+1]), xytext=(q_traj[i], p_traj[i]),
-                            arrowprops=dict(facecolor=color, edgecolor=color, arrowstyle='Simple,tail_width=0.5,head_width=0.5,head_length=0.5'))    
+                            arrowprops=dict(facecolor=color, edgecolor=color, arrowstyle='Simple,tail_width=0.5,head_width=0.5,head_length=0.5'))      
                        
         # Plot the initial and final with a higher z-order without a label
         plt.scatter([q_traj[0]], [p_traj[0]], color='black', zorder=5)
@@ -604,6 +617,34 @@ class Controller():
 
         if save:
             file_name = 'control.png' if name == '' else f'control_{name}.png'
+            plt.savefig(os.path.join(PLOTS_PATH, file_name), format='png', dpi=300)  
+
+        
+    #######################################################################################################################
+
+    def plot_cbf_constraint(self, show=True, save=False, figure=None, name = '', color='blue'):
+        if figure is None:
+            plt.figure()
+        else:
+            plt.sca(figure)
+             
+        t = np.arange(0, self.T, self.dt)
+        constraint = self.cbf_ct.flatten()
+
+        plt.grid() 
+        plt.plot(t, constraint, linewidth=3, label=name, linestyle='-', color=color) 
+
+        plt.grid(True)
+        #plt.title('constraint')
+        plt.xlabel('time [s]') 
+        plt.ylabel('constraint')
+        plt.legend(loc='upper left')
+ 
+        if show:
+            plt.show()
+
+        if save:
+            file_name = 'constraint.png' if name == '' else f'constraint_{name}.png'
             plt.savefig(os.path.join(PLOTS_PATH, file_name), format='png', dpi=300)  
 
         

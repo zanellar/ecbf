@@ -1,8 +1,12 @@
 
 from ecbf.scripts.phsys import PHSystemCanonic
+import sympy as sp
 
-class MassSpring(PHSystemCanonic):
-    def __init__(self, m, k, dt, verbose=False):
+class Pendulum(PHSystemCanonic):
+
+    GRAVITY = 9.81
+
+    def __init__(self, m, l, dt, verbose=False): 
         '''
         This class implements a mass-spring system using SymPy. 
         The system is initialized with the following parameters:
@@ -12,7 +16,7 @@ class MassSpring(PHSystemCanonic):
         - verbose: if true, prints "q" and "p" every step
         '''
         self.m = m
-        self.k = k 
+        self.l = l 
  
         super().__init__(D=0, B=1, K=self.K, V=self.V, dt=dt, verbose=verbose)
 
@@ -23,7 +27,7 @@ class MassSpring(PHSystemCanonic):
     
     def V(self):
         # Potential energy
-        V = 0.5 * self.k * self.q**2
+        V = self.m * self.GRAVITY * self.l * sp.cos(self.q)
         return V
      
  

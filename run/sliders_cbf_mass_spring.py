@@ -2,6 +2,8 @@ import tkinter as tk
 import matplotlib.pyplot as plt
 
 from ecbf.defined_models.mass_spring import MassSpring
+from ecbf.defined_models.pendulum import Pendulum
+from ecbf.defined_models.double_pendulum import DoublePendulum
 from ecbf.barrier_functions.safe_doughnut import SafeDoughnut
 from ecbf.barrier_functions.safe_circle import SafeCircle
 from ecbf.barrier_functions.energy_limit import EnergyLimit 
@@ -20,11 +22,11 @@ time_step_value = tk.Spinbox(root, from_=0.01, to=1, textvariable=tk.DoubleVar(v
 time_step_value.pack()
 
 tk.Label(root, text='q0').pack()
-init_state_value1 = tk.Spinbox(root, from_=-10, to=10, textvariable=tk.DoubleVar(value=-8), increment=0.1)
+init_state_value1 = tk.Spinbox(root, from_=-10, to=10, textvariable=tk.DoubleVar(value=-12), increment=0.1)
 init_state_value1.pack()
 
 tk.Label(root, text='p0').pack()
-init_state_value2 = tk.Spinbox(root, from_=-10, to=10, textvariable=tk.DoubleVar(value=15), increment=0.1)
+init_state_value2 = tk.Spinbox(root, from_=-10, to=10, textvariable=tk.DoubleVar(value=3), increment=0.1)
 init_state_value2.pack()
 
 # tk.Label(root, text='q*').pack()
@@ -40,7 +42,7 @@ weight_input_value = tk.Spinbox(root, from_=0, to=100, textvariable=tk.DoubleVar
 weight_input_value.pack()
 
 tk.Label(root, text='CBF Gamma').pack()
-cbf_gamma_value = tk.Spinbox(root, from_=0, to=10, textvariable=tk.DoubleVar(value=3), increment=0.01)
+cbf_gamma_value = tk.Spinbox(root, from_=0, to=10, textvariable=tk.DoubleVar(value=1), increment=0.01)
 cbf_gamma_value.pack()
 
 tk.Label(root, text='Weight Slack').pack()
@@ -56,7 +58,7 @@ u_min_value = tk.Spinbox(root, from_=-100, to=0, textvariable=tk.IntVar(value=-1
 u_min_value.pack()
 
 tk.Label(root, text='c (offset CBF)').pack()
-c_value = tk.Spinbox(root, from_=-1000, to=1000, textvariable=tk.IntVar(value=10))
+c_value = tk.Spinbox(root, from_=-1000, to=1000, textvariable=tk.IntVar(value=20))
 c_value.pack()
  
 # Create checkboxes for u_min and u_max
@@ -93,11 +95,13 @@ def run_controller():
     }
 
     model = MassSpring(m=2, k=0.5, dt=parameter["time_step"], verbose=False)
+    # model = Pendulum(m=2, l=0.5, dt=parameter["time_step"], verbose=False)
+    # model = DoublePendulum(m1=1, m2=1, l1=1, l2=1, dt=parameter["time_step"], verbose=False)
 
     # cbf = SafeDoughnut(C1=20, C2=10) 
     # cbf = SafeCircle(r=9, c=[0, 0])  
-    # cbf = EnergyLimit(energy_func=model.K, c=float(c_value.get()), pump=pump_var.get()) 
-    cbf = EnergyLimit(energy_func=model.H, c=float(c_value.get()), pump=pump_var.get()) 
+    cbf = EnergyLimit(energy_func=model.K, c=float(c_value.get()), pump=pump_var.get()) 
+    # cbf = EnergyLimit(energy_func=model.H, c=float(c_value.get()), pump=pump_var.get()) 
  
     ctrl = Controller(
         model, 
@@ -109,10 +113,10 @@ def run_controller():
 
 
     ctrl.show(
-        ctrl.plot_phase_trajectory, 
-        ctrl.plot_state,
+        # ctrl.plot_phase_trajectory, 
+        # ctrl.plot_state,
         ctrl.plot_energy_openloop,
-        ctrl.plot_energy_closeloop,
+        ctrl.plot_cbf_constraint,
         ctrl.plot_control,
         ctrl.plot_cbf,
         subplots=(3, 2)
