@@ -14,7 +14,7 @@ from ecbf.utils.paths import PLOTS_PATH, RES_PATH
 
 class Controller():
 
-    def __init__(self, model, parameter, clf=None, cbf=None): 
+    def __init__(self, model, parameter, clf=None, cbf=None, regularization=0): 
         '''
         This class implements a controller that uses a CLF and a CBF to control a system.
         
@@ -51,6 +51,7 @@ class Controller():
             - target_state: the target state of the system                        
         :param clf: the CLF function
         :param cbf: the CBF function
+        :param regularization: the regularization term to avoid chattering when Lie derivatives of the CBF wrt the input matrix is zero
         '''
 
         self.parameter = parameter 
@@ -70,25 +71,39 @@ class Controller():
 
         self.time_steps = int(np.ceil(self.T / self.dt)) 
         self.no_target_defined = True if self.target_state is None else False
-        self.target_state = [0, 0] if self.target_state is None else np.array(self.target_state)
+        self.target_state = np.zeros_like(self.init_state) if self.target_state is None else np.array(self.target_state)
         self.init_state = np.array(self.init_state) - self.target_state # convert to error state
         self.current_state = self.init_state
-
-        ########### Symbolic State ###########
-  
-        _q, _p = sp.symbols('q p')  # define symbolic representation
-        self._state = sp.Matrix([_q, _p])  # row vector
-
-        _qd, _pd = sp.symbols('qd pd')
-        self._target_state = sp.Matrix([_qd, _pd])  # row vector
  
+        # ------------------------------------
+
+        # add regularization to the control input to avoid chattering when Lie derivatives of the CBF wrt the input matrix is zero
+        self.regularize_control = regularization>0
+        self.regularization_sigma = regularization
+
+        print("Regularize control: ", self.regularize_control)
+
         ########### Dynamics ###########
 
         self.model = model
 
-        self.state_dim = self.model.num_states
-        self.control_dim = self.model.num_inputs
+        self.num_states = self.model.num_states
+        self.num_inputs = self.model.num_inputs
         
+        ########### Symbolic State ###########
+   
+        if model.scalar_system:
+            _q, _p = sp.symbols('q p')
+            _qd, _pd = sp.symbols('qd pd')
+        else: 
+            _q = sp.Matrix(sp.symbols(f'q:{self.num_states//2}'))
+            _p = sp.Matrix(sp.symbols(f'p:{self.num_states//2}')) 
+            _qd = sp.Matrix(sp.symbols(f'qd:{self.num_states//2}'))
+            _pd = sp.Matrix(sp.symbols(f'pd:{self.num_states//2}'))
+
+        self._state = sp.Matrix([_q, _p])  # row vector 
+        self._target_state = sp.Matrix([_qd, _pd])  # row vector
+
         ########### CLF ###########
 
         self.clf_tool = clf 
@@ -129,13 +144,7 @@ class Controller():
             _dx_cbf = sp.Matrix([_cbf]).jacobian(self._state).T
             _dx_H = sp.Matrix([self.model._H]).jacobian(self._state).T
               
-            # Lie derivatives of CBF  w.r.t f(x)=F*dHdx(x)
-            print("@@@@@@@@@@@@@@@@@@@@@@2")
-            print("_cbf", _cbf)
-            print("_dx_cbf", _dx_cbf)
-            print("self.model._F",self.model._F)
-            print("self.model._H",self.model._H)
-            print("_dx_H",_dx_H)
+            # Lie derivatives of CBF  w.r.t f(x)=F*dHdx(x) 
             self._dLie_f_cbf = _dx_cbf.T @ self.model._F @ _dx_H
 
             # Lie derivatives of CBF  w.r.t g(x)=G
@@ -158,19 +167,24 @@ class Controller():
 
         self.opti = ca.Opti()
         self.opti.solver('ipopt', opts_setting)
-        self.u = self.opti.variable(self.control_dim)
+        self.u = self.opti.variable(self.num_inputs)
         self.slack = self.opti.variable()
         self.feas = True
 
         ########### Data ###########
-        self.xt = np.zeros((self.state_dim, self.time_steps))
-        self.ut = np.zeros((self.control_dim, self.time_steps))
+        self.xt = np.zeros((self.num_states, self.time_steps))
+        self.ut = np.zeros((self.num_inputs, self.time_steps))
         self.slackt = np.zeros((1, self.time_steps))
         self.clf_t = np.zeros((1, self.time_steps))
         self.cbf_t = np.zeros((1, self.time_steps))
         self.cbf_ct = np.zeros((1, self.time_steps))
-        self.openloop_energy_t = np.zeros((1, self.time_steps))
-        self.closeloop_energy_t = np.zeros((1, self.time_steps))
+        self.total_energy_t = np.zeros((1, self.time_steps))
+        self.potential_energy_t = np.zeros((1, self.time_steps))
+        self.kinetic_energy_t = np.zeros((1, self.time_steps))
+        self.closeloop_total_energy_t = np.zeros((1, self.time_steps))
+        self.closeloop_potential_energy_t = np.zeros((1, self.time_steps))
+        self.closeloop_kinetic_energy_t = np.zeros((1, self.time_steps))
+        
  
 
     #######################################################################################################################
@@ -195,7 +209,7 @@ class Controller():
                 use_slack = True
 
         # objective function
-        self.W = self.weight_input * np.eye(self.control_dim)
+        self.W = self.weight_input * np.eye(self.num_inputs)
         self.obj = .5 * (self.u - u_ref).T @ self.W @ (self.u - u_ref)
         if use_slack:
             self.obj = self.obj + self.weight_slack * self.slack ** 2
@@ -225,10 +239,7 @@ class Controller():
             else:
                 print(f'No control input in the CLF constraint at t = {t}!')
 
-
-        # sigma = 1 # TODO
-        # beta = 1-np.exp(-self.current_state[1]**2/sigma) 
-
+ 
         # CBF constraint
         cbf = None
         if self.cbf_tool is not None:
@@ -237,23 +248,35 @@ class Controller():
             dLie_g_cbf = self.dLie_g_cbf(current_state)
 
             # Lfh + Lgh * u + gamma * h >= 0 
-            self.opti.subject_to(dLie_f_cbf + dLie_g_cbf @ self.u + self.cbf_gamma * cbf >= 0)
+            # sigma = 2
+            # lamda0 = 20 
+            # epsilon0 = lamda0 * np.exp(-dLie_g_cbf**2/sigma**2) 
+            # dLie_g_cbf = dLie_g_cbf + epsilon0
+            self.opti.subject_to(dLie_f_cbf + dLie_g_cbf @ self.u + self.cbf_gamma * cbf  >= 0)
 
         # optimize the Qp problem
         try:
 
             sol = self.opti.solve()
             self.feasible = True
-            optimal_control = sol.value(self.u) 
-            
+            optimal_control = sol.value(self.u)  
+ 
+            # regularization term
+            if self.regularize_control:
+                sigma = self.regularization_sigma 
+                epsilon = np.exp(-dLie_g_cbf**2/sigma**2)  
+                optimal_control = optimal_control*(1 - epsilon)  
+  
             if use_slack:
                 slack = sol.value(self.slack)
             else:
                 slack = None
-                
-            if self.cbf_tool is not None:
-                self.cbf_constrant_value = dLie_f_cbf + dLie_g_cbf @ [[optimal_control]] + self.cbf_gamma * cbf
 
+            optimal_control = np.array(optimal_control).reshape((self.num_inputs,-1))
+
+            if self.cbf_tool is not None: 
+                self.cbf_constrant_value = dLie_f_cbf + dLie_g_cbf @ optimal_control + self.cbf_gamma * cbf 
+ 
             return optimal_control, slack, clf, cbf, self.feasible
         
         except Exception as e:
@@ -282,8 +305,7 @@ class Controller():
 
             u_ref = np.array(u_ref)
             u, delta, clf, cbf, self.feas = self.solve_qp(self.current_state, u_ref, t)
-            # print(f't = {t}, u = {u}, delta = {delta}, clf = {clf}, cbf = {cbf}') 
-
+ 
             if not self.feas:
                 print('\nThis problem is infeasible!\n') 
                 break
@@ -291,20 +313,23 @@ class Controller():
                 pass
 
             self.xt[:, t] = np.copy(self.current_state)
-            self.ut[:, t] = u
+            self.ut[:, t] = u.flatten()
             self.slackt[:, t] = delta
             self.clf_t[:, t] = clf
             self.cbf_t[:, t] = cbf 
             self.cbf_ct[:, t] = self.cbf_constrant_value
 
+            # Compute the energy of the closed-loop system  
+            self.closeloop_total_energy_t[:, t] = self.model.get_energy(self.current_state) 
+            self.closeloop_potential_energy_t[:, t] = self.model.get_energy(self.current_state, type='V')
+            self.closeloop_kinetic_energy_t[:, t] = self.model.get_energy(self.current_state, type='K')
+
             # Compute the energy of the open-loop system 
-            H = self.model.get_energy(self.current_state + self.target_state) 
-            self.openloop_energy_t[:, t] = H
-
-            # Compute the energy of the closed-loop system 
-            H = self.model.get_energy(self.current_state)
-            self.closeloop_energy_t[:, t] = H
-
+            state = self.current_state + self.target_state 
+            self.total_energy_t[:, t] = self.model.get_energy(state)  
+            self.potential_energy_t[:, t] = self.model.get_energy(state, type='V')
+            self.kinetic_energy_t[:, t] = self.model.get_energy(state, type='K')
+ 
             self.current_state, current_output = self.model.step(self.current_state, u)
 
         print('Finish the solve of qp with clf!')
@@ -316,12 +341,10 @@ class Controller():
             np.save(os.path.join(RES_PATH, f'{name}_slackt.npy'), self.slackt)
             np.save(os.path.join(RES_PATH, f'{name}_clf_t.npy'), self.clf_t)
             np.save(os.path.join(RES_PATH, f'{name}_cbf_t.npy'), self.cbf_t)
-            np.save(os.path.join(RES_PATH, f'{name}_openloop_energy_t.npy'), self.openloop_energy_t)
-            np.save(os.path.join(RES_PATH, f'{name}_closeloop_energy_t.npy'), self.closeloop_energy_t)
+            np.save(os.path.join(RES_PATH, f'{name}_total_energy_t.npy'), self.total_energy_t)
+            np.save(os.path.join(RES_PATH, f'{name}_closeloop_total_energy_t.npy'), self.closeloop_total_energy_t)
 
-
-
-
+ 
     #######################################################################################################################
     #######################################################################################################################
     ####################################################################################################################### 
@@ -330,10 +353,11 @@ class Controller():
         plt.close('all')
 
         if subplots:
-            fig, axs = plt.subplots(subplots[0], subplots[1], figsize=(8, 6 * len(args))) 
+            fig, axs = plt.subplots(subplots[0], subplots[1], figsize=(10, len(args))) 
 
             for i, arg in enumerate(args):
                 arg(show=False, save=save, figure=axs[i // subplots[1]][i % subplots[1]])
+                plt.legend()
         else: 
             for i, arg in enumerate(args):
                 plt.figure(i)
@@ -421,16 +445,28 @@ class Controller():
             plt.sca(figure)
 
         t = np.arange(0, self.T, self.dt)
+ 
+        if self.model.scalar_system:
+            q = self.xt[0]
+            p = self.xt[1]
 
-        q = self.xt[0]  
-        p = self.xt[1] 
+            # # convert from error state
+            # q = np.array(q) + self.target_state[0]
+            # p = np.array(p) + self.target_state[1]
+            
+            plt.plot(t, q, linewidth=3, label='q'+name, color=color)
+            plt.plot(t, p, linewidth=3, label='p'+name, linestyle='--', color=color)
 
-        # convert from error state
-        q = np.array(q) + self.target_state[0]
-        p = np.array(p) + self.target_state[1]
+        else:
+            half = len(self.xt) // 2
+            q = self.xt[:half]
+            p = self.xt[half:2*half]
 
-        plt.plot(t, q, linewidth=3, label='q'+name, linestyle='-', color=color)
-        plt.plot(t, p,  linewidth=3, label='p'+name, linestyle='--', color=color)
+            for i in range(len(q)):
+                q[i] = q[i] + self.target_state[0]
+                p[i] = p[i] + self.target_state[1]
+                plt.plot(t, q[i], linewidth=3, label='q'+str(i)+name, color=color)
+                plt.plot(t, p[i],  linewidth=3, label='p'+str(i)+name, linestyle='--', color=color)
 
         # plt.legend()
         plt.grid(True)
@@ -447,14 +483,14 @@ class Controller():
 
     #######################################################################################################################
 
-    def plot_energy_openloop(self, show=True, save=False, figure=None, ylims=None, name = '', color='blue'):
+    def plot_total_energy (self, show=True, save=False, figure=None, ylims=None, name = '', color='blue'):
         if figure is None:
             plt.figure()
         else:
             plt.sca(figure)
             
         t = np.arange(0, self.T, self.dt) 
-        energy = self.openloop_energy_t.flatten()
+        energy = self.total_energy_t.flatten()
 
         plt.plot(t, energy, linewidth=3, color=color, label=name)
  
@@ -474,17 +510,75 @@ class Controller():
             file_name = 'op_energy.png' if name == '' else f'op_energy_{name}.png'
             plt.savefig(os.path.join(PLOTS_PATH, file_name), format='png', dpi=300) 
 
-    
     #######################################################################################################################
 
-    def plot_energy_closeloop(self, show=True, save=False, figure=None, ylims=None, name = '', color='blue'):
+    def plot_kinetic_energy (self, show=True, save=False, figure=None, ylims=None, name = '', color='blue'):
         if figure is None:
             plt.figure()
         else:
             plt.sca(figure)
             
         t = np.arange(0, self.T, self.dt) 
-        energy = self.closeloop_energy_t.flatten()
+        energy = self.kinetic_energy_t.flatten()
+
+        plt.plot(t, energy, linewidth=3, color=color, label=name)
+ 
+        plt.grid(True) 
+        plt.xlabel('time [s]')
+        plt.ylabel('K [J]') 
+        if ylims is not None:
+            plt.ylim(ylims)
+        else:
+            plt.ylim([round(float(min(energy)),3), round(float(max(energy)),3)])
+        #plt.title('Open-loop Energy')
+
+        if show:
+            plt.show()
+
+        if save:
+            file_name = 'op_energy.png' if name == '' else f'op_energy_{name}.png'
+            plt.savefig(os.path.join(PLOTS_PATH, file_name), format='png', dpi=300) 
+
+    #######################################################################################################################
+
+    def plot_potential_energy (self, show=True, save=False, figure=None, ylims=None, name = '', color='blue'):
+        if figure is None:
+            plt.figure()
+        else:
+            plt.sca(figure)
+            
+        t = np.arange(0, self.T, self.dt) 
+        energy = self.potential_energy_t.flatten()
+
+        plt.plot(t, energy, linewidth=3, color=color, label=name)
+ 
+        plt.grid(True) 
+        plt.xlabel('time [s]')
+        plt.ylabel('V [J]') 
+        if ylims is not None:
+            plt.ylim(ylims)
+        else:
+            plt.ylim([round(float(min(energy)),3), round(float(max(energy)),3)])
+        #plt.title('Open-loop Energy')
+
+        if show:
+            plt.show()
+
+        if save:
+            file_name = 'op_energy.png' if name == '' else f'op_energy_{name}.png'
+            plt.savefig(os.path.join(PLOTS_PATH, file_name), format='png', dpi=300) 
+
+    
+    #######################################################################################################################
+
+    def plot_total_energy_closeloop(self, show=True, save=False, figure=None, ylims=None, name = '', color='blue'):
+        if figure is None:
+            plt.figure()
+        else:
+            plt.sca(figure)
+            
+        t = np.arange(0, self.T, self.dt) 
+        energy = self.closeloop_total_energy_t.flatten() 
 
         plt.plot(t, energy, linewidth=3, color=color, label=name)
  
@@ -596,12 +690,16 @@ class Controller():
         else:
             plt.sca(figure)
             
-        u_max = self.parameter['u_max']
-        t = np.arange(0, self.T, self.dt)
-        control = self.ut.flatten()
+        t = np.arange(0, self.T, self.dt) 
+        
+        # plot data in axis 1 for each axis in axis 0 with a different linestyle
+        linestyle = ['-', '--', '-.', ':']
+        linestyle = linestyle*10
+        for i in range(self.num_inputs):
+            control = self.ut[i]
+            plt.plot(t, control, linewidth=3, label='u'+str(i)+name, linestyle=linestyle[i], color=color)
 
-        plt.grid() 
-        plt.plot(t, control, linewidth=3, label=name, linestyle='-', color=color)
+        u_max = self.parameter['u_max']
         if u_max is not None:
             plt.plot(t, u_max * np.ones(t.shape[0]), 'k', linewidth=3, label='Bound', linestyle='--')
             plt.plot(t, -u_max * np.ones(t.shape[0]), 'k', linewidth=3, linestyle='--') 

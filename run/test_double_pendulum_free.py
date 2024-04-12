@@ -13,10 +13,10 @@ dt = 0.01
 model = DoublePendulum(m1=m1, m2=m2, l1=l1, l2=l2, dt=dt, verbose=True)
 
 # Define the initial state
-x0 = [1,1,0,0]
+x0 = [3.14,3.14,0,0]
 
 # Define the input
-u = 0
+u = [[0],[0]]
 
 # Create the simulator
 simulator = Simulator(model)
@@ -41,6 +41,6 @@ print("simulation done")
 # print("animation done")
 
 # Plot the energy trajectory
-simulator.plot_energy(x_traj)
+simulator.plot_energy(x_traj, ylims=[0, 100])
 print("energy plot done")
 

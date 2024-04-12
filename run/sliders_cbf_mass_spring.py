@@ -21,6 +21,14 @@ tk.Label(root, text='Time Step').pack()
 time_step_value = tk.Spinbox(root, from_=0.01, to=1, textvariable=tk.DoubleVar(value=0.1), increment=0.01)
 time_step_value.pack()
 
+tk.Label(root, text='m').pack()
+m_value = tk.Spinbox(root, from_=-20, to=20, textvariable=tk.DoubleVar(value=2), increment=0.1)
+m_value.pack()
+
+tk.Label(root, text='k').pack()
+k_value = tk.Spinbox(root, from_=-20, to=20, textvariable=tk.DoubleVar(value=0.5), increment=0.1)
+k_value.pack()
+
 tk.Label(root, text='q0').pack()
 init_state_value1 = tk.Spinbox(root, from_=-10, to=10, textvariable=tk.DoubleVar(value=-12), increment=0.1)
 init_state_value1.pack()
@@ -28,47 +36,19 @@ init_state_value1.pack()
 tk.Label(root, text='p0').pack()
 init_state_value2 = tk.Spinbox(root, from_=-10, to=10, textvariable=tk.DoubleVar(value=3), increment=0.1)
 init_state_value2.pack()
-
-# tk.Label(root, text='q*').pack()
-# target_state_value1 = tk.Spinbox(root, from_=-20, to=20, textvariable=tk.DoubleVar(value=0), increment=0.1)
-# target_state_value1.pack()
-
-# tk.Label(root, text='p*').pack()
-# target_state_value2 = tk.Spinbox(root, from_=-20, to=20, textvariable=tk.DoubleVar(value=0), increment=0.1)
-# target_state_value2.pack()
-
-tk.Label(root, text='Weight Input').pack()
-weight_input_value = tk.Spinbox(root, from_=0, to=100, textvariable=tk.DoubleVar(value=1), increment=0.1)
-weight_input_value.pack()
-
+ 
 tk.Label(root, text='CBF Gamma').pack()
 cbf_gamma_value = tk.Spinbox(root, from_=0, to=10, textvariable=tk.DoubleVar(value=1), increment=0.01)
 cbf_gamma_value.pack()
-
-tk.Label(root, text='Weight Slack').pack()
-weight_slack_value = tk.Spinbox(root, from_=0, to=10, textvariable=tk.DoubleVar(value=0), increment=0.1)
-weight_slack_value.pack()
-
-tk.Label(root, text='U Max').pack()
-u_max_value = tk.Spinbox(root, from_=0, to=100, textvariable=tk.IntVar(value=100))
-u_max_value.pack()
-
-tk.Label(root, text='U Min').pack()
-u_min_value = tk.Spinbox(root, from_=-100, to=0, textvariable=tk.IntVar(value=-100))
-u_min_value.pack()
-
+  
 tk.Label(root, text='c (offset CBF)').pack()
 c_value = tk.Spinbox(root, from_=-1000, to=1000, textvariable=tk.IntVar(value=20))
 c_value.pack()
- 
-# Create checkboxes for u_min and u_max
-# u_min_var = tk.BooleanVar()
-# u_min_check = tk.Checkbutton(root, text="Use U Min", variable=u_min_var)
-# u_min_check.pack()
+  
 
-# u_max_var = tk.BooleanVar()
-# u_max_check = tk.Checkbutton(root, text="Use U Max", variable=u_max_var)
-# u_max_check.pack()
+limit_K_only_var = tk.BooleanVar()
+u_max_check = tk.Checkbutton(root, text="Limit Kinetic Energy Only", variable=limit_K_only_var)
+u_max_check.pack()
  
 pump_var = tk.BooleanVar()
 pump_check = tk.Checkbutton(root, text="Energy Pump", variable=pump_var)
@@ -85,37 +65,39 @@ def run_controller():
         'time_horizon': float(time_horizon_value.get()),
         'time_step': float(time_step_value.get()),
         'init_state': [float(init_state_value1.get()), float(init_state_value2.get())],
-        'target_state': [0, 0],
-        'weight_input': float(weight_input_value.get()),
-        'weight_slack': float(weight_slack_value.get()),
+        'target_state': None,
+        'weight_input': 1,
+        'weight_slack': None,
         'clf_lambda': None, 
-        'u_max': float(u_max_value.get()),
-        'u_min': float(u_min_value.get()),
+        'u_max': None,
+        'u_min': None,
         'cbf_gamma': float(cbf_gamma_value.get())
     }
 
-    model = MassSpring(m=2, k=0.5, dt=parameter["time_step"], verbose=False)
-    # model = Pendulum(m=2, l=0.5, dt=parameter["time_step"], verbose=False)
-    # model = DoublePendulum(m1=1, m2=1, l1=1, l2=1, dt=parameter["time_step"], verbose=False)
+    model = MassSpring(m=float(m_value.get()), k=float(k_value.get()), dt=parameter["time_step"], verbose=False) 
 
-    # cbf = SafeDoughnut(C1=20, C2=10) 
-    # cbf = SafeCircle(r=9, c=[0, 0])  
-    cbf = EnergyLimit(energy_func=model.K, c=float(c_value.get()), pump=pump_var.get()) 
-    # cbf = EnergyLimit(energy_func=model.H, c=float(c_value.get()), pump=pump_var.get()) 
+    # Control Barrier Function 
+    if limit_K_only_var.get():
+        energy_func = model.K
+    else:
+        energy_func = model.H
+    cbf = EnergyLimit(energy_func=energy_func, c=float(c_value.get()), pump=pump_var.get())  
  
+    # Create a controller
     ctrl = Controller(
         model, 
         parameter,  
         cbf=cbf 
     )
 
+    # Run the controller
     ctrl.run()
 
-
+    # Show the plots
     ctrl.show(
-        # ctrl.plot_phase_trajectory, 
-        # ctrl.plot_state,
-        ctrl.plot_energy_openloop,
+        ctrl.plot_phase_trajectory, 
+        ctrl.plot_state,
+        ctrl.plot_total_energy ,
         ctrl.plot_cbf_constraint,
         ctrl.plot_control,
         ctrl.plot_cbf,

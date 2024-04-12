@@ -3,6 +3,8 @@ import os
 
 
 from ecbf.defined_models.mass_spring import MassSpring
+from ecbf.defined_models.double_pendulum import DoublePendulum
+
 from ecbf.barrier_functions.safe_doughnut import SafeDoughnut
 from ecbf.barrier_functions.safe_circle import SafeCircle
 from ecbf.barrier_functions.energy_limit import EnergyLimit
@@ -13,63 +15,68 @@ colors = ['blue', 'green', 'purple', 'orange', 'brown', 'pink', 'gray', 'olive',
 
 image_file_format = 'png'
 
-def plots(i, N, ctrl, run_name, axs):
+def plots(i, N, ctrl, run_name, arrow_index, axs, list_of_plots = ["phase", "state", "control", "energy", "cbf"], num_inputs = 1):
 
-    # Plotting phase trajectory
-    if i ==0:  
-        ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[0], add_safe_set=True, color=colors[i], plot_end_state=False, arrow_index=10)
-    elif i == N-1:
-        ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[0], add_safe_set=False, color=colors[i], plot_end_state=False, arrow_index=10) 
-        axs[0].legend()
-        file_name = f'phase_trajectory_{run_name}.png'
-        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)  
-    else:
-        ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[0], add_safe_set=False, color=colors[i], plot_end_state=False, arrow_index=10)
+    if "phase" in list_of_plots:
+        # Plotting phase trajectory
+        if i ==0:  
+            ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[0], add_safe_set=True, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=arrow_index)
+        elif i == N-1:
+            ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[0], add_safe_set=False, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=arrow_index) 
+            axs[0].legend()
+            file_name = f'phase_trajectory_{run_name}.png'
+            plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)  
+        else:
+            ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[0], add_safe_set=False, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=arrow_index)
 
+    if "state" in list_of_plots: 
+        # Plotting state
+        if i ==0:  
+            ctrl.plot_state(name=f", $\gamma$={gamma}", show=False, save=False, figure=axs[1], color=colors[i])
+        elif i == N-1:
+            ctrl.plot_state(name=f", $\gamma$={gamma}", show=False, save=False, figure=axs[1], color=colors[i])
+            axs[1].legend()
+            file_name = f'state_{run_name}.png'
+            plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
+        else:
+            ctrl.plot_state(name=f", $\gamma$={gamma}", show=False, save=False, figure=axs[1],color=colors[i])
 
-    # Plotting state
-    if i ==0:  
-        ctrl.plot_state(name=f", $\gamma$={gamma}", show=False, save=False, figure=axs[1], color=colors[i])
-    elif i == N-1:
-        ctrl.plot_state(name=f", $\gamma$={gamma}", show=False, save=False, figure=axs[1], color=colors[i])
-        axs[1].legend()
-        file_name = f'state_{run_name}.png'
-        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
-    else:
-        ctrl.plot_state(name=f", $\gamma$={gamma}", show=False, save=False, figure=axs[1],color=colors[i])
+    if "control" in list_of_plots:
+        name = f"$\gamma$={gamma}" if num_inputs == 1 else f", $\gamma$={gamma}"
+        # Plotting control
+        if i ==0:  
+            ctrl.plot_control(name=name, show=False, save=False, figure=axs[2], color=colors[i])
+        elif i == N-1:
+            ctrl.plot_control(name=name, show=False, save=False, figure=axs[2], color=colors[i])
+            axs[2].legend()
+            file_name = f'control_{run_name}.png'
+            plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
+        else:
+            ctrl.plot_control(name=name, show=False, save=False, figure=axs[2],color=colors[i])
 
-    # Plotting control
-    if i ==0:  
-        ctrl.plot_control(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[2], color=colors[i])
-    elif i == N-1:
-        ctrl.plot_control(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[2], color=colors[i])
-        axs[2].legend()
-        file_name = f'control_{run_name}.png'
-        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
-    else:
-        ctrl.plot_control(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[2],color=colors[i])
+    if "energy" in list_of_plots:
+        # Plotting energy
+        if i ==0:  
+            ctrl.plot_total_energy (name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[3], color=colors[i])
+        elif i == N-1:
+            ctrl.plot_total_energy (name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[3], color=colors[i])
+            axs[3].legend()
+            file_name = f'energy_openloop_{run_name}.png'
+            plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
+        else:
+            ctrl.plot_total_energy (name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[3],color=colors[i])
 
-    # Plotting energy
-    if i ==0:  
-        ctrl.plot_energy_openloop(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[3], color=colors[i])
-    elif i == N-1:
-        ctrl.plot_energy_openloop(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[3], color=colors[i])
-        axs[3].legend()
-        file_name = f'energy_openloop_{run_name}.png'
-        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
-    else:
-        ctrl.plot_energy_openloop(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[3],color=colors[i])
-
-    # Plotting cbf
-    if i ==0:  
-        ctrl.plot_cbf(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[4], color=colors[i])
-    elif i == N-1:
-        ctrl.plot_cbf(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[4], color=colors[i])
-        axs[4].legend()
-        file_name = f'cbf_{run_name}.png'
-        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
-    else:
-        ctrl.plot_cbf(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[4],color=colors[i])
+    if "cbf" in list_of_plots:
+        # Plotting cbf
+        if i ==0:  
+            ctrl.plot_cbf(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[4], color=colors[i])
+        elif i == N-1:
+            ctrl.plot_cbf(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[4], color=colors[i])
+            axs[4].legend()
+            file_name = f'cbf_{run_name}.png'
+            plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
+        else:
+            ctrl.plot_cbf(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[4],color=colors[i])
 
 ####################################################################################
 ####################################################################################
@@ -98,7 +105,7 @@ for i, gamma in enumerate(gammas):
         'u_min': None  
     } 
 
-    run_name = "dampH"
+    run_name = "dampH_massspring"
 
     model = MassSpring(m=2, k=0.5, dt=parameter["time_step"], verbose=False)
  
@@ -113,7 +120,7 @@ for i, gamma in enumerate(gammas):
     ctrl.run(save=True, name=f"{run_name}_gamma{parameter['cbf_gamma']}")
     
     # Plotting 
-    plots(i, len(gammas), ctrl, run_name, axs = [axs1, axs2, axs3, axs4, axs5])
+    plots(i, len(gammas), ctrl, run_name, arrow_index = 5, axs = [axs1, axs2, axs3, axs4, axs5], list_of_plots = ["phase", "state", "control", "energy", "cbf"])
 
 ####################################################################################
 ####################################################################################
@@ -143,7 +150,7 @@ for i, gamma in enumerate(gammas):
         'u_min': None  
     } 
 
-    run_name = "pumpH" 
+    run_name = "pumpH_massspring" 
 
     model = MassSpring(m=2, k=0.5, dt=parameter["time_step"], verbose=False)
  
@@ -158,7 +165,7 @@ for i, gamma in enumerate(gammas):
     ctrl.run(save=True, name=f"{run_name}_gamma{parameter['cbf_gamma']}")
     
     # Plotting
-    plots(i, len(gammas), ctrl, run_name, axs = [axs1, axs2, axs3, axs4, axs5])
+    plots(i, len(gammas), ctrl, run_name, arrow_index = 5, axs = [axs1, axs2, axs3, axs4, axs5], list_of_plots = ["phase", "state", "control", "energy", "cbf"])
 
 
 ####################################################################################
@@ -179,7 +186,7 @@ for i, gamma in enumerate(gammas):
 
     # Use slider values in parameters
     parameter = {
-        'time_horizon': 60,
+        'time_horizon': 100,
         'time_step': 0.1,
         'init_state': [-15, 15],
         'target_state': None,
@@ -190,7 +197,7 @@ for i, gamma in enumerate(gammas):
         'u_min': None  
     } 
 
-    run_name = "dampKout" 
+    run_name = "dampKout_massspring" 
 
     model = MassSpring(m=2, k=0.5, dt=parameter["time_step"], verbose=False)
  
@@ -205,7 +212,7 @@ for i, gamma in enumerate(gammas):
     ctrl.run(save=True, name=f"{run_name}_gamma{parameter['cbf_gamma']}")
     
     # Plotting
-    plots(i, len(gammas), ctrl, run_name, axs = [axs1, axs2, axs3, axs4, axs5])
+    plots(i, len(gammas), ctrl, run_name, arrow_index = 10, axs = [axs1, axs2, axs3, axs4, axs5], list_of_plots = ["phase", "state", "control", "energy", "cbf"])
 
 
 ####################################################################################
@@ -226,7 +233,7 @@ for i, gamma in enumerate(gammas):
 
     # Use slider values in parameters
     parameter = {
-        'time_horizon': 60,
+        'time_horizon': 100,
         'time_step': 0.1,
         'init_state': [-15, 0.1],
         'target_state': None,
@@ -237,7 +244,7 @@ for i, gamma in enumerate(gammas):
         'u_min': None  
     } 
 
-    run_name = "dampKin" 
+    run_name = "dampKin_massspring" 
 
     model = MassSpring(m=2, k=0.5, dt=parameter["time_step"], verbose=False)
  
@@ -252,5 +259,94 @@ for i, gamma in enumerate(gammas):
     ctrl.run(save=True, name=f"{run_name}_gamma{parameter['cbf_gamma']}")
     
     # Plotting
-    plots(i, len(gammas), ctrl, run_name, axs = [axs1, axs2, axs3, axs4, axs5])
+    plots(i, len(gammas), ctrl, run_name, arrow_index = 10, axs = [axs1, axs2, axs3, axs4, axs5], list_of_plots = ["phase", "state", "control", "energy", "cbf"])
+
+
+####################################################################################
+####################################################################################
+####################################################################################
+  
+gammas = [0.1, 10] 
+
+_, axs1 = plt.subplots(1, 1, figsize=(8, 8))  
+_, axs2 = plt.subplots(1, 1, figsize=(8, 8))  
+_, axs3 = plt.subplots(1, 1, figsize=(8, 8))  
+_, axs4 = plt.subplots(1, 1, figsize=(8, 8))  
+_, axs5 = plt.subplots(1, 1, figsize=(8, 8))    
+
+for i, gamma in enumerate(gammas):
+
+    # Use slider values in parameters
+    parameter = {
+        'time_horizon': 10,
+        'time_step': 0.01,
+        'init_state': [3.14,3.14,0.001,0.001],
+        'target_state': None,
+        'weight_input': 1,
+        'cbf_gamma': gamma,
+        'weight_slack': None,
+        'u_max': None,
+        'u_min': None  
+    } 
+
+    run_name = "dampKin_doublependulum" 
+
+    model = DoublePendulum(m1=2, m2=2, l1=1, l2=1, dt=parameter["time_step"], verbose=False)
+ 
+    cbf = EnergyLimit(energy_func=model.K, c=10, pump=False, num_states=model.num_states)
+
+    ctrl = Controller(
+        model, 
+        parameter,  
+        cbf=cbf
+    )
+
+    ctrl.run(save=True, name=f"{run_name}_gamma{parameter['cbf_gamma']}")
+    
+    # Plotting
+    plots(i, len(gammas), ctrl, run_name, arrow_index = 10, axs = [axs1, axs2, axs3, axs4, axs5], list_of_plots = ["state", "control", "energy", "cbf"], num_inputs=model.num_inputs)
+
+####################################################################################
+####################################################################################
+####################################################################################
+  
+gammas = [0.1, 10] 
+
+_, axs1 = plt.subplots(1, 1, figsize=(8, 8))  
+_, axs2 = plt.subplots(1, 1, figsize=(8, 8))  
+_, axs3 = plt.subplots(1, 1, figsize=(8, 8))  
+_, axs4 = plt.subplots(1, 1, figsize=(8, 8))  
+_, axs5 = plt.subplots(1, 1, figsize=(8, 8))    
+
+for i, gamma in enumerate(gammas):
+
+    # Use slider values in parameters
+    parameter = {
+        'time_horizon': 10,
+        'time_step': 0.01,
+        'init_state': [3.14,3.14,6.28,6.28],
+        'target_state': None,
+        'weight_input': 1,
+        'cbf_gamma': gamma,
+        'weight_slack': None,
+        'u_max': None,
+        'u_min': None  
+    } 
+
+    run_name = "dampKout_doublependulum" 
+
+    model = DoublePendulum(m1=2, m2=2, l1=1, l2=1, dt=parameter["time_step"], verbose=False)
+ 
+    cbf = EnergyLimit(energy_func=model.K, c=10, pump=False, num_states=model.num_states)
+
+    ctrl = Controller(
+        model, 
+        parameter,  
+        cbf=cbf
+    )
+
+    ctrl.run(save=True, name=f"{run_name}_gamma{parameter['cbf_gamma']}")
+    
+    # Plotting
+    plots(i, len(gammas), ctrl, run_name, arrow_index = 10, axs = [axs1, axs2, axs3, axs4, axs5], list_of_plots = ["state", "control", "energy", "cbf"], num_inputs=model.num_inputs)
 

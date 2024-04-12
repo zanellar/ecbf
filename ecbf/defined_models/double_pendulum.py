@@ -23,18 +23,19 @@ class DoublePendulum(PHSystemCanonic):
         self.l1 = l1
         self.l2 = l2
  
-        super().__init__(D=[[0,0],[0,0]], B=[[1],[1]], K=self.K, V=self.V, dt=dt, verbose=verbose)
+        super().__init__(D=[[0,0],[0,0]], B=[[1,0],[0,1]], K=self.K, V=self.V, dt=dt, verbose=verbose)
+        # super().__init__(D=[[0,0],[0,0]], B=[[1],[1]], K=self.K, V=self.V, dt=dt, verbose=verbose)
 
     def K(self): 
-        # Kinetic energy
+        # Kinetic energy 
         K1 = 0.5 * self.l1**2 * self.p[0]**2 / self.m1  
-        K2 = 0.5 * self.m2 * (self.l1**2 * self.p[0]**2 / self.m1**2  + self.l2**2 * self.p[1]**2 / self.m2**2 + self.l1 * self.l2 * self.p[0] * self.p[1] * sp.cos(self.q[0] - self.q[1]) / (self.m1 * self.m2))
+        K2 = 0.5 * self.m2 * (self.l1**2 * self.p[0]**2 / self.m1**2  + self.l2**2 * self.p[1]**2 / self.m2**2 + 2 * self.l1 * self.l2 * self.p[0] * self.p[1] * sp.cos(self.q[0] - self.q[1]) / (self.m1 * self.m2))
         return K1 + K2
     
     def V(self):
         # Potential energy
         V1 = - self.m1 * self.GRAVITY * self.l1 * sp.cos(self.q[0]) 
-        V2 = - self.m2 * self.GRAVITY * (self.l1 * sp.cos(self.q[0]) + self.l2 * sp.cos(self.q[1]))
+        V2 = - self.m2 * self.GRAVITY * (self.l1 * sp.cos(self.q[0]) + self.l2 * sp.cos(self.q[1])) 
         return V1 + V2
      
  

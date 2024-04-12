@@ -99,8 +99,8 @@ def run_controller():
     ctrl.show(
         ctrl.plot_phase_trajectory, 
         ctrl.plot_state,
-        ctrl.plot_energy_openloop,
-        ctrl.plot_energy_closeloop,
+        ctrl.plot_total_energy ,
+        ctrl.plot_total_energy_closeloop,
         ctrl.plot_control,
         ctrl.plot_clf,
         subplots=(3, 2) 

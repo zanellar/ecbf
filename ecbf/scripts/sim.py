@@ -35,8 +35,8 @@ class Simulator():
             x, y = self.model.step(x, u)
             x_traj.append(x)
             y_traj.append(y)
-            q = x[0] if self.model.scalar else x[0:self.model.num_states//2]
-            p = x[1] if self.model.scalar else x[self.model.num_states//2:]
+            q = x[0] if self.model.scalar_system else x[0:self.model.num_states//2]
+            p = x[1] if self.model.scalar_system else x[self.model.num_states//2:]
             K_traj.append(self.model.K(q,p))
             V_traj.append(self.model.V(q,p))
             print(f'step {i+1}/{n_steps}')
@@ -145,12 +145,12 @@ class Simulator():
         ani = animation.FuncAnimation(fig, animate, frames=len(state_traj), init_func=init, blit=True)
         plt.show()
 
-    def plot_energy(self, state_traj):
+    def plot_energy(self, state_traj, ylims=None):
         # Calculate the energy of each state
         energy_traj = []
         for state in state_traj:
-            q = state[0] if self.model.scalar else state[0:self.model.num_states//2]
-            p = state[1] if self.model.scalar else state[self.model.num_states//2:]
+            q = state[0] if self.model.scalar_system else state[0:self.model.num_states//2]
+            p = state[1] if self.model.scalar_system else state[self.model.num_states//2:]
             state = np.array([q, p]) 
             energy = self.model.K(q,p) + self.model.V(q,p)
             energy_traj.append(energy) 
@@ -161,6 +161,9 @@ class Simulator():
         plt.xlabel('Time')
         plt.ylabel('Energy')
         plt.xlim([0, len(state_traj)])
-        plt.ylim([round(min(energy_traj),3), round(max(energy_traj),3)])
+        if ylims is not None:
+            plt.ylim(ylims)
+        else:
+            plt.ylim([round(float(min(energy)),3), round(float(max(energy)),3)])
         plt.title('Energy trajectory')
         plt.show()
