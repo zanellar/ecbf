@@ -12,6 +12,10 @@ from sympy.utilities.lambdify import lambdify
 
 from ecbf.utils.paths import PLOTS_PATH, RES_PATH
 
+
+plt.rcParams['font.size'] = 32
+# plt.rcParams['lines.linewidth'] = 7
+
 class Controller():
 
     def __init__(self, model, parameter, clf=None, cbf=None, regularization=0): 
@@ -368,7 +372,20 @@ class Controller():
 
     #######################################################################################################################
 
-    def plot_phase_trajectory(self, add_safe_set=True, plot_end_state = True, state_range=[-20, 20], show=True, save=False, figure=None, name = '', color='blue', arrow_skip=10, arrow_clif=np.inf, arrow_index=-1):
+    def plot_phase_trajectory(
+            self, 
+            add_safe_set=True, 
+            plot_end_state = True, 
+            state_range=[-20, 20], 
+            show=True, 
+            save=False, 
+            figure=None, name = '', 
+            color='blue', 
+            arrow_skip=10, 
+            arrow_clif=np.inf, 
+            arrow_index=-1 
+        ):
+
         if figure is None:
             plt.figure()
         else:
@@ -382,7 +399,7 @@ class Controller():
         p_traj = np.array(p_traj) + self.target_state[1]
   
         # Plot the phase trajectory
-        plt.plot(q_traj, p_traj, color=color, label=name)
+        plt.plot(q_traj, p_traj, color=color, label=name, linewidth=3)
 
         # Add arrows to indicate the direction of motion
         for i in range(0, len(q_traj) - 1, arrow_skip):  # Stop one step earlier
@@ -425,8 +442,8 @@ class Controller():
 
         plt.grid(True)
         plt.xlabel('q [m]')
-        plt.ylabel('p [m]')
-        #plt.title('Phase space trajectory')
+        plt.ylabel('p [m]') 
+         
         
         if show:
             plt.show()
@@ -438,7 +455,7 @@ class Controller():
   
     #######################################################################################################################
 
-    def plot_state(self, show=True, save=False, figure=None, name = '', color='blue'):
+    def plot_state(self, show=True, save=False, figure=None, name = '', color='blue', ylims=None):
         if figure is None:
             plt.figure()
         else:
@@ -454,8 +471,8 @@ class Controller():
             # q = np.array(q) + self.target_state[0]
             # p = np.array(p) + self.target_state[1]
             
-            plt.plot(t, q, linewidth=3, label='q'+name, color=color)
-            plt.plot(t, p, linewidth=3, label='p'+name, linestyle='--', color=color)
+            plt.plot(t, q, linewidth=5, label='q'+name, color=color)
+            plt.plot(t, p, linewidth=5, label='p'+name, linestyle='--', color=color)
 
         else:
             half = len(self.xt) // 2
@@ -465,14 +482,21 @@ class Controller():
             for i in range(len(q)):
                 q[i] = q[i] + self.target_state[0]
                 p[i] = p[i] + self.target_state[1]
-                plt.plot(t, q[i], linewidth=3, label='q'+str(i)+name, color=color)
-                plt.plot(t, p[i],  linewidth=3, label='p'+str(i)+name, linestyle='--', color=color)
+                plt.plot(t, q[i], linewidth=5, label='q'+str(i)+name, color=color)
+                plt.plot(t, p[i],  linewidth=5, label='p'+str(i)+name, linestyle='--', color=color)
 
         # plt.legend()
         plt.grid(True)
         #plt.title('State Variable')
         plt.ylabel('q, p [m]')
         plt.xlabel('time [s]')
+
+        if ylims is not None:
+            plt.ylim(ylims)
+        else:
+            m = min(min(q), min(p))
+            M = max(max(q), max(p))
+            plt.ylim([round(float(m-0.1*abs(M-m)),3), round(float(M+0.1*abs(M-m)),3)])
 
         if show:
             plt.show()
@@ -492,16 +516,18 @@ class Controller():
         t = np.arange(0, self.T, self.dt) 
         energy = self.total_energy_t.flatten()
 
-        plt.plot(t, energy, linewidth=3, color=color, label=name)
+        plt.plot(t, energy, linewidth=5, color=color, label=name)
  
         plt.grid(True) 
         plt.xlabel('time [s]')
         plt.ylabel('H [J]') 
+        
         if ylims is not None:
             plt.ylim(ylims)
         else:
-            plt.ylim([round(float(min(energy)),3), round(float(max(energy)),3)])
-        #plt.title('Open-loop Energy')
+            m = min(energy)
+            M = max(energy)
+            plt.ylim([round(float(m-0.1*abs(M-m)),3), round(float(M+0.1*abs(M-m)),3)])
 
         if show:
             plt.show()
@@ -521,16 +547,18 @@ class Controller():
         t = np.arange(0, self.T, self.dt) 
         energy = self.kinetic_energy_t.flatten()
 
-        plt.plot(t, energy, linewidth=3, color=color, label=name)
+        plt.plot(t, energy, linewidth=5, color=color, label=name)
  
         plt.grid(True) 
         plt.xlabel('time [s]')
         plt.ylabel('K [J]') 
+         
         if ylims is not None:
             plt.ylim(ylims)
         else:
-            plt.ylim([round(float(min(energy)),3), round(float(max(energy)),3)])
-        #plt.title('Open-loop Energy')
+            m = min(energy)
+            M = max(energy)
+            plt.ylim([round(float(m-0.1*abs(M-m)),3), round(float(M+0.1*abs(M-m)),3)])
 
         if show:
             plt.show()
@@ -550,16 +578,18 @@ class Controller():
         t = np.arange(0, self.T, self.dt) 
         energy = self.potential_energy_t.flatten()
 
-        plt.plot(t, energy, linewidth=3, color=color, label=name)
+        plt.plot(t, energy, linewidth=5, color=color, label=name)
  
         plt.grid(True) 
         plt.xlabel('time [s]')
         plt.ylabel('V [J]') 
+         
         if ylims is not None:
             plt.ylim(ylims)
         else:
-            plt.ylim([round(float(min(energy)),3), round(float(max(energy)),3)])
-        #plt.title('Open-loop Energy')
+            m = min(energy)
+            M = max(energy)
+            plt.ylim([round(float(m-0.1*abs(M-m)),3), round(float(M+0.1*abs(M-m)),3)])
 
         if show:
             plt.show()
@@ -580,16 +610,18 @@ class Controller():
         t = np.arange(0, self.T, self.dt) 
         energy = self.closeloop_total_energy_t.flatten() 
 
-        plt.plot(t, energy, linewidth=3, color=color, label=name)
+        plt.plot(t, energy, linewidth=5, color=color, label=name)
  
         plt.grid() 
         plt.xlabel('time [s]')
-        plt.ylabel('H [J]') 
+        plt.ylabel('H [J]')  
+
         if ylims is not None:
             plt.ylim(ylims)
         else:
-            plt.ylim([round(float(min(energy)),3), round(float(max(energy)),3)])
-        #plt.title('Closed-loop Energy')
+            m = min(energy)
+            M = max(energy)
+            plt.ylim([round(float(m-0.1*abs(M-m)),3), round(float(M+0.1*abs(M-m)),3)])
 
         if show:
             plt.show()
@@ -611,7 +643,7 @@ class Controller():
         slack = self.slackt.flatten()
 
         plt.grid() 
-        plt.plot(t, slack, linewidth=3, color='b')
+        plt.plot(t, slack, linewidth=5, color='b')
         #plt.title('Slack')
         plt.ylabel('delta')
 
@@ -634,16 +666,18 @@ class Controller():
         t = np.arange(0, self.T, self.dt)
         clf = self.clf_t.flatten()
 
-        plt.plot(t, clf, linewidth=3, color=color , label=name)
+        plt.plot(t, clf, linewidth=5, color=color , label=name)
 
         #plt.title('clf')
         plt.grid(True)
         plt.ylabel('V')
-        plt.xlabel('time [s]')
+        plt.xlabel('time [s]') 
         if ylims is not None:
             plt.ylim(ylims)
         else:
-            plt.ylim([round(float(min(clf)),3), round(float(max(clf)),3)])
+            m = min(clf)
+            M = max(clf)
+            plt.ylim([round(float(m-0.1*abs(M-m)),3), round(float(M+0.1*abs(M-m)),3)])
  
         if show:
             plt.show()
@@ -663,7 +697,7 @@ class Controller():
         t = np.arange(0, self.T, self.dt)
         cbf = self.cbf_t.flatten()
 
-        plt.plot(t, cbf, linewidth=3, color=color, label=name)
+        plt.plot(t, cbf, linewidth=5, color=color, label=name)
 
         #plt.title('cbf')
         plt.grid(True)
@@ -672,7 +706,9 @@ class Controller():
         if ylims is not None:
             plt.ylim(ylims)
         else:
-            plt.ylim([round(float(min(cbf)),3), round(float(max(cbf)),3)])
+            m = min(cbf)
+            M = max(cbf)
+            # plt.ylim([round(float(m-0.1*abs(M-m)),3), round(float(M+0.1*abs(M-m)),3)])
 
         if show:
             plt.show()
@@ -684,7 +720,7 @@ class Controller():
 
     #######################################################################################################################
 
-    def plot_control(self, show=True, save=False, figure=None, name = '', color='blue'):
+    def plot_control(self, show=True, save=False, figure=None, name = '', color='blue', ylims=None):
         if figure is None:
             plt.figure()
         else:
@@ -694,21 +730,29 @@ class Controller():
         
         # plot data in axis 1 for each axis in axis 0 with a different linestyle
         linestyle = ['-', '--', '-.', ':']
-        linestyle = linestyle*10
+        linestyle = linestyle*10 
         for i in range(self.num_inputs):
             control = self.ut[i]
-            plt.plot(t, control, linewidth=3, label='u'+str(i)+name, linestyle=linestyle[i], color=color)
+            label = name if self.num_inputs == 1 else 'u'+str(i)+name 
+            plt.plot(t, control, linewidth=5, label=label, linestyle=linestyle[i], color=color)
 
         u_max = self.parameter['u_max']
         if u_max is not None:
-            plt.plot(t, u_max * np.ones(t.shape[0]), 'k', linewidth=3, label='Bound', linestyle='--')
-            plt.plot(t, -u_max * np.ones(t.shape[0]), 'k', linewidth=3, linestyle='--') 
+            plt.plot(t, u_max * np.ones(t.shape[0]), 'k', linewidth=5, label='Bound', linestyle='--')
+            plt.plot(t, -u_max * np.ones(t.shape[0]), 'k', linewidth=5, linestyle='--') 
 
         plt.grid(True)
         #plt.title('control')
         plt.xlabel('time [s]') 
         plt.ylabel('u')
         plt.legend(loc='upper left')
+
+        if ylims is not None:
+            plt.ylim(ylims)
+        else:
+            m = min(control)
+            M = max(control)
+            plt.ylim([round(float(m-0.1*abs(M-m)),3), round(float(M+0.1*abs(M-m)),3)])
  
         if show:
             plt.show()
@@ -720,7 +764,7 @@ class Controller():
         
     #######################################################################################################################
 
-    def plot_cbf_constraint(self, show=True, save=False, figure=None, name = '', color='blue'):
+    def plot_cbf_constraint(self, show=True, save=False, figure=None, name = '', color='blue', ylims=None):
         if figure is None:
             plt.figure()
         else:
@@ -730,13 +774,20 @@ class Controller():
         constraint = self.cbf_ct.flatten()
 
         plt.grid() 
-        plt.plot(t, constraint, linewidth=3, label=name, linestyle='-', color=color) 
+        plt.plot(t, constraint, linewidth=5, label=name, linestyle='-', color=color) 
 
         plt.grid(True)
         #plt.title('constraint')
         plt.xlabel('time [s]') 
         plt.ylabel('constraint')
         plt.legend(loc='upper left')
+
+        if ylims is not None:
+            plt.ylim(ylims)
+        else:
+            m = min(constraint)
+            M = max(constraint)
+            plt.ylim([round(float(m-0.1*abs(M-m)),3), round(float(M+0.1*abs(M-m)),3)])
  
         if show:
             plt.show()

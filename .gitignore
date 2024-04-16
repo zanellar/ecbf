@@ -55,6 +55,6 @@ Thumbs.db
 ecbf.egg-info
 *.pt
 *.pth 
-data/plots/*  
-data/results/*  
+# data/plots/*  
+# data/results/*  
  

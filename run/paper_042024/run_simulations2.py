@@ -11,85 +11,27 @@ from ecbf.barrier_functions.energy_limit import EnergyLimit
 from ecbf.scripts.control import Controller
 from ecbf.utils.paths import PLOTS_PATH 
   
+
 colors = ['blue', 'green', 'purple', 'orange', 'brown', 'pink', 'gray', 'olive', 'cyan']
 
-image_file_format = 'png'
-
-def plots(i, N, ctrl, run_name, arrow_index, axs, list_of_plots = ["phase", "state", "control", "energy", "cbf"], num_inputs = 1):
-
-    if "phase" in list_of_plots:
-        # Plotting phase trajectory
-        if i ==0:  
-            ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[0], add_safe_set=True, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=arrow_index)
-        elif i == N-1:
-            ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[0], add_safe_set=False, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=arrow_index) 
-            axs[0].legend()
-            file_name = f'phase_trajectory_{run_name}.png'
-            plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)  
-        else:
-            ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[0], add_safe_set=False, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=arrow_index)
-
-    if "state" in list_of_plots: 
-        # Plotting state
-        if i ==0:  
-            ctrl.plot_state(name=f", $\gamma$={gamma}", show=False, save=False, figure=axs[1], color=colors[i])
-        elif i == N-1:
-            ctrl.plot_state(name=f", $\gamma$={gamma}", show=False, save=False, figure=axs[1], color=colors[i])
-            axs[1].legend()
-            file_name = f'state_{run_name}.png'
-            plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
-        else:
-            ctrl.plot_state(name=f", $\gamma$={gamma}", show=False, save=False, figure=axs[1],color=colors[i])
-
-    if "control" in list_of_plots:
-        name = f"$\gamma$={gamma}" if num_inputs == 1 else f", $\gamma$={gamma}"
-        # Plotting control
-        if i ==0:  
-            ctrl.plot_control(name=name, show=False, save=False, figure=axs[2], color=colors[i])
-        elif i == N-1:
-            ctrl.plot_control(name=name, show=False, save=False, figure=axs[2], color=colors[i])
-            axs[2].legend()
-            file_name = f'control_{run_name}.png'
-            plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
-        else:
-            ctrl.plot_control(name=name, show=False, save=False, figure=axs[2],color=colors[i])
-
-    if "energy" in list_of_plots:
-        # Plotting energy
-        if i ==0:  
-            ctrl.plot_total_energy (name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[3], color=colors[i])
-        elif i == N-1:
-            ctrl.plot_total_energy (name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[3], color=colors[i])
-            axs[3].legend()
-            file_name = f'energy_openloop_{run_name}.png'
-            plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
-        else:
-            ctrl.plot_total_energy (name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[3],color=colors[i])
-
-    if "cbf" in list_of_plots:
-        # Plotting cbf
-        if i ==0:  
-            ctrl.plot_cbf(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[4], color=colors[i])
-        elif i == N-1:
-            ctrl.plot_cbf(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[4], color=colors[i])
-            axs[4].legend()
-            file_name = f'cbf_{run_name}.png'
-            plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
-        else:
-            ctrl.plot_cbf(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs[4],color=colors[i])
-
+image_file_format = 'pdf'
+ 
 ####################################################################################
 ####################################################################################
 ####################################################################################
 
 gammas = [2,4] 
 
-_, axs1 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs2 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs3 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs4 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs5 = plt.subplots(1, 1, figsize=(8, 8))  
+_, axs1 = plt.subplots(1, 1, figsize=(14, 14))  
+_, axs2 = plt.subplots(1, 1, figsize=(18, 6))  
+_, axs2 = plt.subplots(1, 1, figsize=(18, 6))  
+_, axs3 = plt.subplots(1, 1, figsize=(18, 10))  
+_, axs4 = plt.subplots(1, 1, figsize=(18, 6))  
  
+ylims2 = None
+ylims3 = None
+ylims4 = None
+
 for i, gamma in enumerate(gammas):
 
     # Use slider values in parameters
@@ -118,9 +60,83 @@ for i, gamma in enumerate(gammas):
     )
 
     ctrl.run(save=True, name=f"{run_name}_gamma{parameter['cbf_gamma']}")
+     
+
+    ######################### Plotting phase trajectory
+    if i ==0:  
+        ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", state_range=[-20,20], show=False, save=False, figure=axs1, add_safe_set=True, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=5)
+    elif i < len(gammas)-1:
+        ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", state_range=[-20,20], show=False, save=False, figure=axs1, add_safe_set=False, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=5)
+    else:
+        ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", state_range=[-20,20], show=False, save=False, figure=axs1, add_safe_set=False, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=5) 
+        axs1.legend()
+        axs1.legend(loc='lower right')
+        file_name = f'phase_trajectory_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)  
+  
+    ########################## Plotting control
+    name = f"$\gamma$={gamma}"  
+
+    ctrl.plot_control(name=name, show=False, save=False, figure=axs2, color=colors[i], ylims=None)
+
+    # Correct ylims 
+    if ylims2 is None:
+        ylims2 = list(axs2.get_ylim())
+    else:
+        if axs2.get_ylim()[0] < ylims2[0]:
+            ylims2[0] = axs2.get_ylim()[0]
+        if axs2.get_ylim()[1] > ylims2[1]:
+            ylims2[1] = axs2.get_ylim()[1] 
+
+    if i == len(gammas)-1:  
+        axs2.legend()
+        axs2.set_ylim(ylims2)
+        axs2.legend(loc='lower right')
+        axs2.set_xlabel('')
+        file_name = f'control_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
+
+    ########################## Plotting energy
+
+    ctrl.plot_total_energy (name=f"$\gamma$={gamma}", show=False, save=False, figure=axs3, color=colors[i], ylims=None) 
+
+    # Correct ylims 
+    if ylims3 is None:
+        ylims3 = list(axs3.get_ylim())
+    else:
+        if axs3.get_ylim()[0] < ylims3[0]:
+            ylims3[0] = axs3.get_ylim()[0]
+        if axs3.get_ylim()[1] > ylims3[1]:
+            ylims3[1] = axs3.get_ylim()[1] 
+
+    if i == len(gammas)-1:  
+        axs3.legend()
+        axs3.legend(loc='upper right')
+        axs3.set_ylim(ylims3)
+        file_name = f'total_energy_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
+
+    ########################## Plotting cbf
     
-    # Plotting 
-    plots(i, len(gammas), ctrl, run_name, arrow_index = 5, axs = [axs1, axs2, axs3, axs4, axs5], list_of_plots = ["phase", "state", "control", "energy", "cbf"])
+    ctrl.plot_cbf(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs4, color=colors[i], ylims=None)
+
+    # Correct ylims 
+    if ylims4 is None:
+        ylims4 = list(axs4.get_ylim())
+    else:
+        if axs4.get_ylim()[0] < ylims4[0]:
+            ylims4[0] = axs4.get_ylim()[0]
+        if axs4.get_ylim()[1] > ylims4[1]:
+            ylims4[1] = axs4.get_ylim()[1] 
+
+    if i == len(gammas)-1:  
+        axs4.legend()
+        axs4.legend(loc='lower right')
+        axs4.set_ylim(ylims4)
+        axs4.set_xlabel('')
+        file_name = f'cbf_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
+ 
 
 ####################################################################################
 ####################################################################################
@@ -129,11 +145,15 @@ for i, gamma in enumerate(gammas):
 
 gammas = [2,4]
 
-_, axs1 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs2 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs3 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs4 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs5 = plt.subplots(1, 1, figsize=(8, 8))  
+_, axs1 = plt.subplots(1, 1, figsize=(14, 14))  
+_, axs2 = plt.subplots(1, 1, figsize=(18, 6))  
+_, axs2 = plt.subplots(1, 1, figsize=(18, 6))  
+_, axs3 = plt.subplots(1, 1, figsize=(18, 10))  
+_, axs4 = plt.subplots(1, 1, figsize=(18, 6))  
+
+ylims2 = None
+ylims3 = None
+ylims4 = None
 
 for i, gamma in enumerate(gammas):
 
@@ -164,9 +184,83 @@ for i, gamma in enumerate(gammas):
 
     ctrl.run(save=True, name=f"{run_name}_gamma{parameter['cbf_gamma']}")
     
-    # Plotting
-    plots(i, len(gammas), ctrl, run_name, arrow_index = 5, axs = [axs1, axs2, axs3, axs4, axs5], list_of_plots = ["phase", "state", "control", "energy", "cbf"])
+    # Plotting  
+    arrow_index = 2
 
+    ######################### Plotting phase trajectory
+    if i ==0:  
+        ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", state_range=[-20,20], show=False, save=False, figure=axs1, add_safe_set=True, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=arrow_index)
+    elif i < len(gammas)-1:
+        ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", state_range=[-20,20], show=False, save=False, figure=axs1, add_safe_set=False, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=arrow_index)
+    else:
+        ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", state_range=[-20,20], show=False, save=False, figure=axs1, add_safe_set=False, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=arrow_index) 
+        axs1.legend()
+        axs1.legend(loc='lower right')
+        file_name = f'phase_trajectory_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)  
+  
+    ########################## Plotting control
+    name = f"$\gamma$={gamma}"  
+    
+    ctrl.plot_control(name=name, show=False, save=False, figure=axs2,color=colors[i], ylims=None)
+
+    # Correct ylims 
+    if ylims2 is None:
+        ylims2 = list(axs2.get_ylim())
+    else:
+        if axs2.get_ylim()[0] < ylims2[0]:
+            ylims2[0] = axs2.get_ylim()[0]
+        if axs2.get_ylim()[1] > ylims2[1]:
+            ylims2[1] = axs2.get_ylim()[1] 
+
+    if i == len(gammas)-1:  
+        axs2.legend()
+        axs2.set_ylim(ylims2)
+        axs2.legend(loc='upper right')
+        axs2.set_xlabel('')
+        file_name = f'control_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
+
+    ########################## Plotting energy
+        
+    ctrl.plot_total_energy (name=f"$\gamma$={gamma}", show=False, save=False, figure=axs3, color=colors[i], ylims=None)
+
+    # Correct ylims 
+    if ylims3 is None:
+        ylims3 = list(axs3.get_ylim())
+    else:
+        if axs3.get_ylim()[0] < ylims3[0]:
+            ylims3[0] = axs3.get_ylim()[0]
+        if axs3.get_ylim()[1] > ylims3[1]:
+            ylims3[1] = axs3.get_ylim()[1] 
+
+    if i == len(gammas)-1:  
+        axs3.legend()
+        axs3.legend(loc='lower right')
+        axs3.set_ylim(ylims3)
+        file_name = f'total_energy_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300) 
+
+    ########################## Plotting cbf
+        
+    ctrl.plot_cbf(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs4, color=colors[i], ylims=None)
+        
+    # Correct ylims 
+    if ylims4 is None:
+        ylims4 = list(axs4.get_ylim())
+    else:
+        if axs4.get_ylim()[0] < ylims4[0]:
+            ylims4[0] = axs4.get_ylim()[0]
+        if axs4.get_ylim()[1] > ylims4[1]:
+            ylims4[1] = axs4.get_ylim()[1]  
+
+    if i == len(gammas)-1:  
+        axs4.legend()
+        axs4.legend(loc='lower right')
+        axs4.set_ylim(ylims4)
+        axs4.set_xlabel('')
+        file_name = f'cbf_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300) 
 
 ####################################################################################
 ####################################################################################
@@ -176,11 +270,15 @@ for i, gamma in enumerate(gammas):
 gammas = [0.1, 0.5, 10]
 # gammas = [0.5, 2, 50]
 
-_, axs1 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs2 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs3 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs4 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs5 = plt.subplots(1, 1, figsize=(8, 8))  
+_, axs1 = plt.subplots(1, 1, figsize=(14, 14))  
+_, axs2 = plt.subplots(1, 1, figsize=(18, 6))  
+_, axs2 = plt.subplots(1, 1, figsize=(18, 6))  
+_, axs3 = plt.subplots(1, 1, figsize=(18, 10))  
+_, axs4 = plt.subplots(1, 1, figsize=(18, 6))  
+
+ylims2 = None
+ylims3 = None
+ylims4 = None
 
 for i, gamma in enumerate(gammas):
 
@@ -210,9 +308,85 @@ for i, gamma in enumerate(gammas):
     )
 
     ctrl.run(save=True, name=f"{run_name}_gamma{parameter['cbf_gamma']}")
+     
+    # Plotting  
+    arrow_index = 10
+
+    ######################### Plotting phase trajectory
+    if i ==0:  
+        ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", state_range=[-20,20], show=False, save=False, figure=axs1, add_safe_set=True, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=arrow_index)
+    elif i < len(gammas)-1:
+        ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", state_range=[-20,20], show=False, save=False, figure=axs1, add_safe_set=False, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=arrow_index)
+    else:
+        ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", state_range=[-20,20], show=False, save=False, figure=axs1, add_safe_set=False, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=arrow_index) 
+        axs1.legend()
+        axs1.legend(loc='lower right')
+        file_name = f'phase_trajectory_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)  
+  
+    ########################## Plotting control
+    name = f"$\gamma$={gamma}"  
     
-    # Plotting
-    plots(i, len(gammas), ctrl, run_name, arrow_index = 10, axs = [axs1, axs2, axs3, axs4, axs5], list_of_plots = ["phase", "state", "control", "energy", "cbf"])
+    ctrl.plot_control(name=name, show=False, save=False, figure=axs2, color=colors[i], ylims=None) 
+
+    # Correct ylims 
+    if ylims2 is None:
+        ylims2 = list(axs2.get_ylim())
+    else:
+        if axs2.get_ylim()[0] < ylims2[0]:
+            ylims2[0] = axs2.get_ylim()[0]
+        if axs2.get_ylim()[1] > ylims2[1]:
+            ylims2[1] = axs2.get_ylim()[1] 
+
+    if i == len(gammas)-1:  
+        axs2.legend()
+        axs2.legend(loc='lower right')
+        axs2.set_ylim(ylims2)
+        axs2.set_xlabel('')
+        file_name = f'control_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
+        
+
+    ########################## Plotting energy 
+
+    ctrl.plot_total_energy (name=f"$\gamma$={gamma}", show=False, save=False, figure=axs3, color=colors[i], ylims=None) 
+    
+    # Correct ylims 
+    if ylims3 is None:
+        ylims3 = list(axs3.get_ylim())
+    else:
+        if axs3.get_ylim()[0] < ylims3[0]:
+            ylims3[0] = axs3.get_ylim()[0]
+        if axs3.get_ylim()[1] > ylims3[1]:
+            ylims3[1] = axs3.get_ylim()[1] 
+
+    if i == len(gammas)-1:  
+        axs3.legend()
+        axs3.legend(loc='upper right')
+        axs3.set_ylim(ylims3)
+        file_name = f'total_energy_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300) 
+
+    ########################## Plotting cbf 
+
+    ctrl.plot_cbf(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs4, color=colors[i], ylims=None) 
+
+    # Correct ylims 
+    if ylims4 is None:
+        ylims4 = list(axs4.get_ylim())
+    else:
+        if axs4.get_ylim()[0] < ylims4[0]:
+            ylims4[0] = axs4.get_ylim()[0]
+        if axs4.get_ylim()[1] > ylims4[1]:
+            ylims4[1] = axs4.get_ylim()[1] 
+
+    if i == len(gammas)-1:  
+        axs4.legend()
+        axs2.legend(loc='upper right')
+        axs4.set_ylim(ylims4)
+        axs4.set_xlabel('')
+        file_name = f'cbf_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300) 
 
 
 ####################################################################################
@@ -223,11 +397,15 @@ for i, gamma in enumerate(gammas):
 gammas = [0.1, 0.5, 10]
 # gammas = [0.5, 2, 50]
 
-_, axs1 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs2 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs3 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs4 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs5 = plt.subplots(1, 1, figsize=(8, 8))  
+_, axs1 = plt.subplots(1, 1, figsize=(14, 14))  
+_, axs2 = plt.subplots(1, 1, figsize=(18, 6))  
+_, axs2 = plt.subplots(1, 1, figsize=(18, 6))  
+_, axs3 = plt.subplots(1, 1, figsize=(18, 10))  
+_, axs4 = plt.subplots(1, 1, figsize=(18, 6))  
+
+ylims2 = None
+ylims3 = None
+ylims4 = None
 
 for i, gamma in enumerate(gammas):
 
@@ -257,9 +435,85 @@ for i, gamma in enumerate(gammas):
     )
 
     ctrl.run(save=True, name=f"{run_name}_gamma{parameter['cbf_gamma']}")
-    
-    # Plotting
-    plots(i, len(gammas), ctrl, run_name, arrow_index = 10, axs = [axs1, axs2, axs3, axs4, axs5], list_of_plots = ["phase", "state", "control", "energy", "cbf"])
+     
+    # Plotting  
+    arrow_index = 13
+
+    ######################### Plotting phase trajectory
+    if i ==0:  
+        ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", state_range=[-20,20], show=False, save=False, figure=axs1, add_safe_set=True, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=arrow_index)
+    elif i < len(gammas)-1:
+        ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", state_range=[-20,20], show=False, save=False, figure=axs1, add_safe_set=False, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=arrow_index)
+    else:
+        ctrl.plot_phase_trajectory(name=f"$\gamma$={gamma}", state_range=[-20,20], show=False, save=False, figure=axs1, add_safe_set=False, color=colors[i], plot_end_state=False, arrow_skip=1, arrow_index=arrow_index) 
+        axs1.legend()
+        axs1.legend(loc='lower right')
+        file_name = f'phase_trajectory_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)  
+  
+    ########################## Plotting control
+    name = f"$\gamma$={gamma}"   
+
+    ctrl.plot_control(name=name, show=False, save=False, figure=axs2, color=colors[i], ylims=None) 
+
+    # Correct ylims 
+    if ylims2 is None:
+        ylims2 = list(axs2.get_ylim())
+    else:
+        if axs2.get_ylim()[0] < ylims2[0]:
+            ylims2[0] = axs2.get_ylim()[0]
+        if axs2.get_ylim()[1] > ylims2[1]:
+            ylims2[1] = axs2.get_ylim()[1]  
+            
+    if i == len(gammas)-1:  
+        axs2.legend()
+        axs2.legend(loc='lower right')
+        axs2.set_ylim(ylims2)
+        axs2.set_xlabel('')
+        file_name = f'control_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300)
+
+    ########################## Plotting energy 
+
+    ctrl.plot_total_energy (name=f"$\gamma$={gamma}", show=False, save=False, figure=axs3, color=colors[i], ylims=None) 
+
+    # Correct ylims 
+    if ylims3 is None:
+        ylims3 = list(axs3.get_ylim())
+    else:
+        if axs3.get_ylim()[0] < ylims3[0]:
+            ylims3[0] = axs3.get_ylim()[0]
+        if axs3.get_ylim()[1] > ylims3[1]:
+            ylims3[1] = axs3.get_ylim()[1] 
+
+    if i == len(gammas)-1:  
+        axs3.legend()
+        axs3.legend(loc='upper right')
+        axs3.set_ylim(ylims3)
+        file_name = f'total_energy_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300) 
+
+    ########################## Plotting cbf 
+
+    ctrl.plot_cbf(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs4, color=colors[i], ylims=None) 
+
+    # Correct ylims 
+    if ylims4 is None:
+        ylims4 = list(axs4.get_ylim())
+    else:
+        if axs4.get_ylim()[0] < ylims4[0]:
+            ylims4[0] = axs4.get_ylim()[0]
+        if axs4.get_ylim()[1] > ylims4[1]:
+            ylims4[1] = axs4.get_ylim()[1] 
+
+    if i == len(gammas)-1:  
+        axs4.legend()
+        axs2.legend(loc='upper right')
+        axs4.set_ylim(ylims4)
+        axs4.set_xlabel('')
+        file_name = f'cbf_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300) 
+
 
 
 ####################################################################################
@@ -268,11 +522,15 @@ for i, gamma in enumerate(gammas):
   
 gammas = [0.1, 10] 
 
-_, axs1 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs2 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs3 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs4 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs5 = plt.subplots(1, 1, figsize=(8, 8))    
+_, axs1 = plt.subplots(1, 1, figsize=(14, 14))  
+_, axs2 = plt.subplots(1, 1, figsize=(18, 6))  
+_, axs2 = plt.subplots(1, 1, figsize=(18, 6))  
+_, axs3 = plt.subplots(1, 1, figsize=(18, 10))  
+_, axs4 = plt.subplots(1, 1, figsize=(18, 6))    
+
+ylims2 = None
+ylims3 = None
+ylims4 = None
 
 for i, gamma in enumerate(gammas):
 
@@ -303,8 +561,73 @@ for i, gamma in enumerate(gammas):
 
     ctrl.run(save=True, name=f"{run_name}_gamma{parameter['cbf_gamma']}")
     
-    # Plotting
-    plots(i, len(gammas), ctrl, run_name, arrow_index = 10, axs = [axs1, axs2, axs3, axs4, axs5], list_of_plots = ["state", "control", "energy", "cbf"], num_inputs=model.num_inputs)
+    # Plotting  
+
+    ########################## Plotting control
+    name = f"$, \gamma$={gamma}"  
+    
+    ctrl.plot_control(name=name, show=False, save=False, figure=axs2, color=colors[i], ylims=None) 
+
+    # Correct ylims 
+    # if ylims2 is None:
+    #     ylims2 = list(axs2.get_ylim())
+    # else:
+    #     if axs2.get_ylim()[0] < ylims2[0]:
+    #         ylims2[0] = axs2.get_ylim()[0]
+    #     if axs2.get_ylim()[1] > ylims2[1]:
+    #         ylims2[1] = axs2.get_ylim()[1] 
+
+    if i == len(gammas)-1:  
+        axs2.legend()
+        axs2.legend(loc='upper right')
+        axs2.set_ylim([-10,44])
+        axs2.set_xlabel('')
+        file_name = f'control_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300) 
+
+    ########################## Plotting energy 
+
+    ctrl.plot_total_energy (name=f"$\gamma$={gamma}", show=False, save=False, figure=axs3, color=colors[i], ylims=None) 
+
+    # Correct ylims 
+    if ylims3 is None:
+        ylims3 = list(axs3.get_ylim())
+    else:
+        if axs3.get_ylim()[0] < ylims3[0]:
+            ylims3[0] = axs3.get_ylim()[0]
+        if axs3.get_ylim()[1] > ylims3[1]:
+            ylims3[1] = axs3.get_ylim()[1] 
+
+    if i == len(gammas)-1:  
+        axs3.legend()
+        axs3.legend(loc='upper right')
+        axs3.set_ylim(ylims3)
+        file_name = f'total_energy_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300) 
+
+    ########################## Plotting cbf
+    ctrl.plot_cbf(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs4, color=colors[i], ylims=None)
+
+    print("@@@@@@@@", axs4.get_ylim(), ylims4) 
+    
+    # Correct ylims 
+    if ylims4 is None:
+        ylims4 = list(axs4.get_ylim())
+    else:
+        if axs4.get_ylim()[0] < ylims4[0]:
+            ylims4[0] = axs4.get_ylim()[0]
+        if axs4.get_ylim()[1] > ylims4[1]:
+            ylims4[1] = axs4.get_ylim()[1] 
+
+
+    if i == len(gammas)-1:  
+        axs4.legend()
+        axs4.legend(loc='lower right')
+        axs4.set_ylim(ylims4)
+        axs4.set_xlabel('')
+        file_name = f'cbf_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300) 
+ 
 
 ####################################################################################
 ####################################################################################
@@ -312,11 +635,15 @@ for i, gamma in enumerate(gammas):
   
 gammas = [0.1, 10] 
 
-_, axs1 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs2 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs3 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs4 = plt.subplots(1, 1, figsize=(8, 8))  
-_, axs5 = plt.subplots(1, 1, figsize=(8, 8))    
+_, axs1 = plt.subplots(1, 1, figsize=(14, 14))  
+_, axs2 = plt.subplots(1, 1, figsize=(18, 6))  
+_, axs2 = plt.subplots(1, 1, figsize=(18, 6))  
+_, axs3 = plt.subplots(1, 1, figsize=(18, 10))  
+_, axs4 = plt.subplots(1, 1, figsize=(18, 6))    
+
+ylims2 = None
+ylims3 = None
+ylims4 = None
 
 for i, gamma in enumerate(gammas):
 
@@ -346,7 +673,69 @@ for i, gamma in enumerate(gammas):
     )
 
     ctrl.run(save=True, name=f"{run_name}_gamma{parameter['cbf_gamma']}")
+     
+    # Plotting  
+
+    ########################## Plotting control
+    name = f"$, \gamma$={gamma}"   
+
+    ctrl.plot_control(name=name, show=False, save=False, figure=axs2, color=colors[i], ylims=None) 
     
-    # Plotting
-    plots(i, len(gammas), ctrl, run_name, arrow_index = 10, axs = [axs1, axs2, axs3, axs4, axs5], list_of_plots = ["state", "control", "energy", "cbf"], num_inputs=model.num_inputs)
+    # # Correct ylims 
+    # if ylims2 is None:
+    #     ylims2 = list(axs2.get_ylim())
+    # else:
+    #     if axs2.get_ylim()[0] < ylims2[0]:
+    #         ylims2[0] = axs2.get_ylim()[0]
+    #     if axs2.get_ylim()[1] > ylims2[1]:
+    #         ylims2[1] = axs2.get_ylim()[1] 
+
+    if i == len(gammas)-1:  
+        axs2.legend()
+        axs2.legend(loc='lower right')
+        axs2.set_ylim([-44,33])
+        axs2.set_xlabel('')
+        file_name = f'control_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300) 
+
+    ########################## Plotting energy 
+
+    ctrl.plot_total_energy (name=f"$\gamma$={gamma}", show=False, save=False, figure=axs3, color=colors[i], ylims=None) 
+
+    # Correct ylims 
+    if ylims3 is None:
+        ylims3 = list(axs3.get_ylim())
+    else:
+        if axs3.get_ylim()[0] < ylims3[0]:
+            ylims3[0] = axs3.get_ylim()[0]
+        if axs3.get_ylim()[1] > ylims3[1]:
+            ylims3[1] = axs3.get_ylim()[1] 
+
+    if i == len(gammas)-1:  
+        axs3.legend()
+        axs3.legend(loc='upper right')
+        axs3.set_ylim(ylims3)
+        file_name = f'total_energy_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300) 
+
+    ########################## Plotting cbf 
+
+    ctrl.plot_cbf(name=f"$\gamma$={gamma}", show=False, save=False, figure=axs4, color=colors[i], ylims=None) 
+
+    # Correct ylims 
+    if ylims4 is None:
+        ylims4 = list(axs4.get_ylim())
+    else:
+        if axs4.get_ylim()[0] < ylims4[0]:
+            ylims4[0] = axs4.get_ylim()[0]
+        if axs4.get_ylim()[1] > ylims4[1]:
+            ylims4[1] = axs4.get_ylim()[1] 
+
+    if i == len(gammas)-1:  
+        axs4.legend()
+        axs4.legend(loc='lower right')
+        axs4.set_xlabel('')
+        axs4.set_ylim(ylims4)
+        file_name = f'cbf_{run_name}.{image_file_format}'
+        plt.savefig(os.path.join(PLOTS_PATH, file_name), format=image_file_format, dpi=300) 
 
