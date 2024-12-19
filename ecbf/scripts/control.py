@@ -442,7 +442,7 @@ class Controller():
 
         plt.grid(True)
         plt.xlabel('q [m]')
-        plt.ylabel('p [m]') 
+        plt.ylabel('p [Kg m/s]') 
          
         
         if show:
@@ -488,7 +488,7 @@ class Controller():
         # plt.legend()
         plt.grid(True)
         #plt.title('State Variable')
-        plt.ylabel('q, p [m]')
+        plt.ylabel('q [m], p [Kg m/s]')
         plt.xlabel('time [s]')
 
         if ylims is not None:
