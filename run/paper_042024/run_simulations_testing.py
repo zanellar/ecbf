@@ -1,13 +1,21 @@
+import matplotlib
 import matplotlib.pyplot as plt
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+
 import os
-
-
+ 
 from ecbf.defined_models.mass_spring import MassSpring
 from ecbf.barrier_functions.safe_doughnut import SafeDoughnut
 from ecbf.barrier_functions.safe_circle import SafeCircle
 from ecbf.barrier_functions.energy_limit import EnergyLimit
 from ecbf.scripts.control import Controller
 from ecbf.utils.paths import PLOTS_PATH 
+
+'''
+            In this script, we will run simulations for the mass-spring system with different barrier functions 
+                            !!! MAKE SEPARETE PLOTS FOR EACH SIMULATION IN PNG FORMAT!!!
+'''
   
 gammas = [2,4]
 

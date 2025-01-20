@@ -1,7 +1,10 @@
-import matplotlib.pyplot as plt
 import os
 
-
+import matplotlib
+import matplotlib.pyplot as plt
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+  
 from ecbf.defined_models.mass_spring import MassSpring
 from ecbf.defined_models.double_pendulum import DoublePendulum
 
@@ -10,6 +13,11 @@ from ecbf.barrier_functions.safe_circle import SafeCircle
 from ecbf.barrier_functions.energy_limit import EnergyLimit
 from ecbf.scripts.control import Controller
 from ecbf.utils.paths import PLOTS_PATH 
+  
+'''
+            In this script, we will run simulations for the mass-spring system with different barrier functions 
+                            !!! PLOTS ARE COMBINED INTO ONE FIGURE FOR EACH SIMULATION IN PDF FORMAT !!!
+'''
   
 
 colors = ['blue', 'green', 'purple', 'orange', 'brown', 'pink', 'gray', 'olive', 'cyan']

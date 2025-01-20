@@ -3,8 +3,9 @@ import numpy as np
 import sympy as sp
 import casadi as ca
 import matplotlib
-matplotlib.rcParams['figure.dpi'] = 200
-#matplotlib.use('TkAgg')  # Do this BEFORE importing matplotlib.pyplotimport matplotlib.pyplot as plt
+matplotlib.rcParams['figure.dpi'] = 200 
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import matplotlib.patches as mpatches
