@@ -9,12 +9,14 @@ from ecbf.barrier_functions.safe_circle import SafeCircle
 from ecbf.barrier_functions.energy_limit import EnergyLimit 
 from ecbf.scripts.control import Controller
 
+import numpy as np 
+
 # Create a new Tk root widget
 root = tk.Tk()
  
 # Create Spinboxes for parameters with labels
 tk.Label(root, text='Time Horizon').pack()
-time_horizon_value = tk.Spinbox(root, from_=1, to=100, textvariable=tk.IntVar(value=5))
+time_horizon_value = tk.Spinbox(root, from_=1, to=100, textvariable=tk.IntVar(value=10))
 time_horizon_value.pack()
 
 tk.Label(root, text='Time Step').pack()
@@ -22,11 +24,11 @@ time_step_value = tk.Spinbox(root, from_=0.001, to=0.1, textvariable=tk.DoubleVa
 time_step_value.pack()
 
 tk.Label(root, text='m1').pack()
-m1_value = tk.Spinbox(root, from_=-20, to=20, textvariable=tk.DoubleVar(value=1), increment=0.1)
+m1_value = tk.Spinbox(root, from_=-20, to=20, textvariable=tk.DoubleVar(value=1.5), increment=0.1)
 m1_value.pack()
 
 tk.Label(root, text='m2').pack()
-m2_value = tk.Spinbox(root, from_=-20, to=20, textvariable=tk.DoubleVar(value=1), increment=0.1)
+m2_value = tk.Spinbox(root, from_=-20, to=20, textvariable=tk.DoubleVar(value=1.5), increment=0.1)
 m2_value.pack()
 
 tk.Label(root, text='l1').pack()
@@ -36,6 +38,14 @@ l1_value.pack()
 tk.Label(root, text='l2').pack()
 l2_value = tk.Spinbox(root, from_=-20, to=20, textvariable=tk.DoubleVar(value=1), increment=0.1)
 l2_value.pack()
+
+tk.Label(root, text='b1').pack()
+b1_value = tk.Spinbox(root, from_=-20, to=20, textvariable=tk.DoubleVar(value=1), increment=0.1)
+b1_value.pack()
+
+tk.Label(root, text='b2').pack()
+b2_value = tk.Spinbox(root, from_=-20, to=20, textvariable=tk.DoubleVar(value=1), increment=0.1)
+b2_value.pack()
 
 tk.Label(root, text='init q1').pack()
 init_q1_value = tk.Spinbox(root, from_=-10, to=10, textvariable=tk.DoubleVar(value=1.57), increment=0.1)
@@ -58,7 +68,7 @@ cbf_gamma_value = tk.Spinbox(root, from_=0, to=10, textvariable=tk.DoubleVar(val
 cbf_gamma_value.pack() 
 
 tk.Label(root, text='c (offset CBF)').pack()
-c_value = tk.Spinbox(root, from_=-1000, to=1000, textvariable=tk.IntVar(value=1))
+c_value = tk.Spinbox(root, from_=-1000, to=1000, textvariable=tk.IntVar(value=10))
 c_value.pack()
  
 limit_K_only_var = tk.BooleanVar()
@@ -94,7 +104,9 @@ def run_controller():
         m1=float(m1_value.get()), 
         m2=float(m2_value.get()), 
         l1=float(l1_value.get()), 
-        l2=float(l2_value.get()), 
+        l2=float(l2_value.get()),  
+        b1=float(b1_value.get()),
+        b2=float(b2_value.get()),
         dt=parameter["time_step"], 
         verbose=False
     )
@@ -128,6 +140,10 @@ def run_controller():
         ctrl.plot_cbf,
         subplots=(3, 2)
     ) 
+
+    x = np.array(ctrl.xt)
+    traj_angles = [[x[0][i], x[1][i]] for i in range(x.shape[1])] 
+    model.visualize(traj_angles, skip=50)
  
 
 run_button = tk.Button(root, text="Run Controller", command=run_controller)

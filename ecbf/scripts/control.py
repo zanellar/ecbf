@@ -14,7 +14,7 @@ from sympy.utilities.lambdify import lambdify
 from ecbf.utils.paths import PLOTS_PATH, RES_PATH
 
 
-plt.rcParams['font.size'] = 32
+# plt.rcParams['font.size'] = 32
 # plt.rcParams['lines.linewidth'] = 7
 
 class Controller():

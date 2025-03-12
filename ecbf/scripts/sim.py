@@ -47,8 +47,13 @@ class Simulator():
         This function plots the phase trajectory of the system.
 
         Inputs:
-        - state_traj: list of states (list)
+        - state_traj: list of states as pairs of q and p (list). For example, [[q1,p1], [q2,p2], ...]
         '''
+
+        # Rise error when the state dimension is not 2
+        if len(state_traj[0]) != 2:
+            raise ValueError('The state dimension must be 2 (i.e., q and p must be scalar). Current state dimension: {}'.format(len(state_traj[0])))
+        
         q_traj = [x[0] for x in state_traj]
         p_traj = [x[1] for x in state_traj]
   
@@ -75,6 +80,17 @@ class Simulator():
             plt.show()
 
     def plot_phase_portrait(self, state_traj, qlim, plim):
+        '''
+        This function plots the phase portrait of the system.
+
+        Inputs:
+        - state_traj: list of states as pairs of q and p (list). For example, [[q1,p1], [q2,p2], ...]
+        '''
+
+        # Rise error when the state dimension is not 2
+        if len(state_traj[0]) != 2:
+            raise ValueError('The state dimension must be 2 (i.e., q and p must be scalar). Current state dimension: {}'.format(len(state_traj[0])))
+        
         # Create a grid of points
         q = np.linspace(qlim[0], qlim[1], 20)
         p = np.linspace(plim[0], plim[1], 20)
@@ -112,6 +128,16 @@ class Simulator():
         plt.show()
 
     def animate_phase_trajectory(self, state_traj):
+        '''
+        This function animates the phase trajectory of the system.
+
+        Inputs:
+        - state_traj: list of states as pairs of q and p (list). For example, [[q1,p1], [q2,p2], ...]
+        '''
+        # Rise error when the state dimension is not 2
+        if len(state_traj[0]) != 2:
+            raise ValueError('The state dimension must be 2 (i.e., q and p must be scalar). Current state dimension: {}'.format(len(state_traj[0])))
+        
         fig, ax = plt.subplots()
         ax.set_xlim(-2, 2)
         ax.set_ylim(-2, 2)
