@@ -1,8 +1,10 @@
-
-from ecbf.scripts.phsys import PHSystemCanonic
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import sympy as sp
+
+from ecbf.scripts.phsys import PHSystemCanonic
+from ecbf.utils.paths import PLOTS_PATH
 
 class DoublePendulum(PHSystemCanonic):
 
@@ -53,8 +55,12 @@ class DoublePendulum(PHSystemCanonic):
         V1 = - self.m1 * self.GRAVITY * self.l1 * sp.cos(self.q[0]) 
         V2 = - self.m2 * self.GRAVITY * (self.l1 * sp.cos(self.q[0]) + self.l2 * sp.cos(self.q[1])) 
         return V1 + V2
-       
-    def visualize(self, traj_angles, skip=1, color=False):
+    
+    ##################################################################################################################################################
+    ##################################################################################################################################################
+    ##################################################################################################################################################
+    
+    def visualize(self, traj_angles, skip=1, name="", show=True, save=False, figure=None, color="black"):
         '''
         This function visualizes the evolution of double pendulum system. Darker colors indicate later time steps.   
 
@@ -63,8 +69,10 @@ class DoublePendulum(PHSystemCanonic):
         - skip: number of steps to skip between each frame (int)
         '''
 
-        self.fig, self.ax = plt.subplots() 
-        self.ax.clear()
+        if figure is None:
+            plt.figure()
+        else:
+            plt.sca(figure) 
 
         theta1, theta2 = self.q 
   
@@ -74,19 +82,31 @@ class DoublePendulum(PHSystemCanonic):
             y1 = -self.l1 * np.cos(theta1)
             x2 = x1 + self.l2 * np.sin(theta2)
             y2 = y1 - self.l2 * np.cos(theta2)
-            if color:
-                colormap = plt.cm.viridis(i / len(traj_angles)) # Use viridis colormap
-                alpha = 1
+            if color == "viridis":
+                color = plt.cm.viridis(i / len(traj_angles)) # Use viridis colormap
+                alpha = 1 
             else:
-                colormap = plt.cm.Greys(i / len(traj_angles))  # Use grayscale colormap
-                alpha = i / len(traj_angles) 
-            self.ax.plot([0, x1, x2], [0, y1, y2], color=colormap, alpha=alpha) # Draw the pendulum
-            self.ax.plot(x1, y1, 'o', color=colormap, alpha=alpha) # Draw the first joint
-            self.ax.plot(x2, y2, 'o', color=colormap, alpha=alpha) # Draw the second joint
+                alpha = i / len(traj_angles)  
 
-        self.ax.set_xlim(-self.l1 - self.l2, self.l1 + self.l2)
-        self.ax.set_ylim(-self.l1 - self.l2, self.l1 + self.l2)
-        self.ax.set_aspect('equal')
-        self.ax.grid(True) 
-        plt.draw()
-        plt.pause(0.01)
+            
+            plt.plot([0, x1, x2], [0, y1, y2], color=color, alpha=alpha, linewidth=8) # Draw the pendulum
+            if i == len(traj_angles) - 1:
+                plt.plot([0, x1, x2], [0, y1, y2], color=color, alpha=alpha, linewidth=8, label=name) # Draw the pendulum (add the label only for the last time step to be included in the legend)
+
+            plt.plot(x1, y1, 'o', color=color, alpha=alpha) # Draw the first joint
+            plt.plot(x2, y2, 'o', color=color, alpha=alpha) # Draw the second joint
+
+        plt.xlim(-self.l1 - self.l2, self.l1 + self.l2)
+        plt.ylim(-self.l1 - self.l2, self.l1 + self.l2) 
+        plt.grid(True)  
+        plt.gca().set_aspect('equal', adjustable='box')
+        # plt.xlabel('x')
+        # plt.ylabel('y') 
+        # plt.draw()
+        
+        if show:
+            plt.show()
+
+        if save:
+            file_name = 'cartesian.png' if name == '' else f'cartesian_{name}.png'
+            plt.savefig(os.path.join(PLOTS_PATH, file_name), format='png', dpi=300)  

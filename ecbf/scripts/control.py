@@ -2,10 +2,7 @@ import os
 import numpy as np
 import sympy as sp
 import casadi as ca
-import matplotlib
-matplotlib.rcParams['figure.dpi'] = 200 
-matplotlib.rcParams['pdf.fonttype'] = 42
-matplotlib.rcParams['ps.fonttype'] = 42
+import matplotlib 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import matplotlib.patches as mpatches
@@ -296,7 +293,7 @@ class Controller():
     #######################################################################################################################
     #######################################################################################################################
         
-    def run(self, u_ref=[0], save= False, name=''):
+    def run(self, u_ref=0, save= False, name=''):
         '''
         Run the controller and solve the QP problem at each time step.  
 
@@ -308,7 +305,12 @@ class Controller():
             if t % 100 == 0:
                 print(f't = {t}')
 
-            u_ref = np.array(u_ref)
+            # if u_ref is a scalar convert it to an array repeting the value for each control input
+            if isinstance(u_ref, (int, float)):
+                u_ref = np.array([u_ref]*self.num_inputs) 
+            else:
+                u_ref = np.array(u_ref)
+                
             u, delta, clf, cbf, self.feas = self.solve_qp(self.current_state, u_ref, t)
  
             if not self.feas:
@@ -356,7 +358,7 @@ class Controller():
         
     def show(self, *args, save=False, subplots=False):
         plt.close('all')
-
+ 
         if subplots:
             fig, axs = plt.subplots(subplots[0], subplots[1], figsize=(10, len(args))) 
 

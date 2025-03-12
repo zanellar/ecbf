@@ -8,6 +8,7 @@ from ecbf.barrier_functions.safe_doughnut import SafeDoughnut
 from ecbf.barrier_functions.safe_circle import SafeCircle
 from ecbf.barrier_functions.energy_limit import EnergyLimit 
 from ecbf.scripts.control import Controller
+from ecbf.scripts.control_switch import ControllerSwitch
 
 import numpy as np 
 
@@ -40,11 +41,11 @@ l2_value = tk.Spinbox(root, from_=-20, to=20, textvariable=tk.DoubleVar(value=1)
 l2_value.pack()
 
 tk.Label(root, text='b1').pack()
-b1_value = tk.Spinbox(root, from_=-20, to=20, textvariable=tk.DoubleVar(value=1), increment=0.1)
+b1_value = tk.Spinbox(root, from_=-20, to=20, textvariable=tk.DoubleVar(value=0.5), increment=0.1)
 b1_value.pack()
 
 tk.Label(root, text='b2').pack()
-b2_value = tk.Spinbox(root, from_=-20, to=20, textvariable=tk.DoubleVar(value=1), increment=0.1)
+b2_value = tk.Spinbox(root, from_=-20, to=20, textvariable=tk.DoubleVar(value=0.5), increment=0.1)
 b2_value.pack()
 
 tk.Label(root, text='init q1').pack()
@@ -62,6 +63,14 @@ init_p1_value.pack()
 tk.Label(root, text='init p2').pack()
 init_p2_value = tk.Spinbox(root, from_=-10, to=10, textvariable=tk.DoubleVar(value=1.57), increment=0.1)
 init_p2_value.pack()
+
+tk.Label(root, text='Switch On Step').pack()
+switch_on_step_value = tk.Spinbox(root, from_=0, to=99999, textvariable=tk.IntVar(value=0), increment=100)
+switch_on_step_value.pack()
+
+tk.Label(root, text='Switch Off Step').pack()
+switch_off_step_value = tk.Spinbox(root, from_=0, to=99999, textvariable=tk.IntVar(value=99999), increment=100)
+switch_off_step_value.pack()
   
 tk.Label(root, text='CBF Gamma').pack()
 cbf_gamma_value = tk.Spinbox(root, from_=0, to=10, textvariable=tk.DoubleVar(value=1), increment=0.01)
@@ -78,6 +87,7 @@ u_max_check.pack()
 pump_var = tk.BooleanVar()
 pump_check = tk.Checkbutton(root, text="Energy Pump", variable=pump_var)
 pump_check.pack()
+ 
 
 # Create a button to run the controller
 def run_controller():
@@ -119,15 +129,28 @@ def run_controller():
 
     cbf = EnergyLimit(num_states=4, energy_func=energy_func, c=float(c_value.get()), pump=pump_var.get())  
  
-    ctrl = Controller(
+ 
+    # ctrl = Controller(
+    #     model, 
+    #     parameter,  
+    #     cbf=cbf,
+    #     # regularization=2
+    # )
+ 
+    # ctrl.run()
+
+    ctrl = ControllerSwitch(
         model, 
         parameter,  
         cbf=cbf,
         # regularization=2
     )
-
-    ctrl.run()
-
+ 
+    ctrl.run(
+        switch_on = float(switch_on_step_value.get()),
+        switch_off= float(switch_off_step_value.get())
+    )
+ 
 
     ctrl.show(
         # ctrl.plot_phase_trajectory, 
@@ -141,9 +164,11 @@ def run_controller():
         subplots=(3, 2)
     ) 
 
+    _, axs5 = plt.subplots(1, 1, figsize=(40, 25))
+
     x = np.array(ctrl.xt)
     traj_angles = [[x[0][i], x[1][i]] for i in range(x.shape[1])] 
-    model.visualize(traj_angles, skip=50)
+    model.visualize(traj_angles, skip=50, figure=axs5, color="blue")
  
 
 run_button = tk.Button(root, text="Run Controller", command=run_controller)
