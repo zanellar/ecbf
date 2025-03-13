@@ -60,7 +60,7 @@ class DoublePendulum(PHSystemCanonic):
     ##################################################################################################################################################
     ##################################################################################################################################################
     
-    def visualize(self, traj_angles, skip=1, name="", show=True, save=False, figure=None, color="black"):
+    def visualize(self, traj_angles, skip=1, name="", show=True, save=False, figure=None, color="black", linewidth=8):
         '''
         This function visualizes the evolution of double pendulum system. Darker colors indicate later time steps.   
 
@@ -89,9 +89,9 @@ class DoublePendulum(PHSystemCanonic):
                 alpha = i / len(traj_angles)  
 
             
-            plt.plot([0, x1, x2], [0, y1, y2], color=color, alpha=alpha, linewidth=8) # Draw the pendulum
+            plt.plot([0, x1, x2], [0, y1, y2], color=color, alpha=alpha, linewidth=linewidth) # Draw the pendulum
             if i == len(traj_angles) - 1:
-                plt.plot([0, x1, x2], [0, y1, y2], color=color, alpha=alpha, linewidth=8, label=name) # Draw the pendulum (add the label only for the last time step to be included in the legend)
+                plt.plot([0, x1, x2], [0, y1, y2], color=color, alpha=alpha, linewidth=linewidth, label=name) # Draw the pendulum (add the label only for the last time step to be included in the legend)
 
             plt.plot(x1, y1, 'o', color=color, alpha=alpha) # Draw the first joint
             plt.plot(x2, y2, 'o', color=color, alpha=alpha) # Draw the second joint

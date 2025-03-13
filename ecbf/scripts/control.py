@@ -356,19 +356,19 @@ class Controller():
     #######################################################################################################################
     ####################################################################################################################### 
         
-    def show(self, *args, save=False, subplots=False):
+    def show(self, *args, save=False, subplots=False, **kwargs):
         plt.close('all')
  
         if subplots:
             fig, axs = plt.subplots(subplots[0], subplots[1], figsize=(10, len(args))) 
 
             for i, arg in enumerate(args):
-                arg(show=False, save=save, figure=axs[i // subplots[1]][i % subplots[1]])
+                arg(show=False, save=save, figure=axs[i // subplots[1]][i % subplots[1]], **kwargs)
                 plt.legend()
         else: 
             for i, arg in enumerate(args):
                 plt.figure(i)
-                arg(show=False, save=save)
+                arg(show=False, save=save, **kwargs)
 
         plt.tight_layout()
         plt.show()
@@ -386,7 +386,8 @@ class Controller():
             color='blue', 
             arrow_skip=10, 
             arrow_clif=np.inf, 
-            arrow_index=-1 
+            arrow_index=-1 ,
+            linewidth=3
         ):
 
         if figure is None:
@@ -402,7 +403,7 @@ class Controller():
         p_traj = np.array(p_traj) + self.target_state[1]
   
         # Plot the phase trajectory
-        plt.plot(q_traj, p_traj, color=color, label=name, linewidth=3)
+        plt.plot(q_traj, p_traj, color=color, label=name, linewidth=linewidth)
 
         # Add arrows to indicate the direction of motion
         for i in range(0, len(q_traj) - 1, arrow_skip):  # Stop one step earlier
@@ -458,7 +459,9 @@ class Controller():
   
     #######################################################################################################################
 
-    def plot_state(self, show=True, save=False, figure=None, name = '', color='blue', ylims=None):
+    def plot_state(self, show=True, save=False, figure=None, name = '', color='blue', ylims=None, plot_q=True, plot_p=True, linewidth=5):
+
+
         if figure is None:
             plt.figure()
         else:
@@ -474,19 +477,26 @@ class Controller():
             # q = np.array(q) + self.target_state[0]
             # p = np.array(p) + self.target_state[1]
             
-            plt.plot(t, q, linewidth=5, label='q'+name, color=color)
-            plt.plot(t, p, linewidth=5, label='p'+name, linestyle='--', color=color)
+            if plot_q:
+                plt.plot(t, q, linewidth=linewidth, label='q'+name, color=color)
+            if plot_p:
+                plt.plot(t, p, linewidth=linewidth, label='p'+name, linestyle='--', color=color)
 
         else:
             half = len(self.xt) // 2
             q = self.xt[:half]
             p = self.xt[half:2*half]
 
+            if type(color) == str:
+                color = [color]*half
+             
             for i in range(len(q)):
                 q[i] = q[i] + self.target_state[0]
                 p[i] = p[i] + self.target_state[1]
-                plt.plot(t, q[i], linewidth=5, label='q'+str(i)+name, color=color)
-                plt.plot(t, p[i],  linewidth=5, label='p'+str(i)+name, linestyle='--', color=color)
+                if plot_q:
+                    plt.plot(t, q[i], linewidth=linewidth, label='q'+str(i)+name, color=color[i] )
+                if plot_p:
+                    plt.plot(t, p[i],  linewidth=linewidth, label='p'+str(i)+name, linestyle='--', color=color[i])
 
         # plt.legend()
         plt.grid(True)
@@ -497,8 +507,8 @@ class Controller():
         if ylims is not None:
             plt.ylim(ylims)
         else:
-            m = min(min(q), min(p))
-            M = max(max(q), max(p))
+            m = min(np.min(q), np.min(p))
+            M = max(np.max(q), np.max(p))
             plt.ylim([round(float(m-0.1*abs(M-m)),3), round(float(M+0.1*abs(M-m)),3)])
 
         if show:
@@ -510,7 +520,7 @@ class Controller():
 
     #######################################################################################################################
 
-    def plot_total_energy (self, show=True, save=False, figure=None, ylims=None, name = '', color='blue'):
+    def plot_total_energy (self, show=True, save=False, figure=None, ylims=None, name = '', color='blue', linewidth=5):
         if figure is None:
             plt.figure()
         else:
@@ -519,7 +529,7 @@ class Controller():
         t = np.arange(0, self.T, self.dt) 
         energy = self.total_energy_t.flatten()
 
-        plt.plot(t, energy, linewidth=5, color=color, label=name)
+        plt.plot(t, energy, linewidth=linewidth, color=color, label=name)
  
         plt.grid(True) 
         plt.xlabel('time [s]')
@@ -541,7 +551,7 @@ class Controller():
 
     #######################################################################################################################
 
-    def plot_kinetic_energy (self, show=True, save=False, figure=None, ylims=None, name = '', color='blue'):
+    def plot_kinetic_energy (self, show=True, save=False, figure=None, ylims=None, name = '', color='blue', linewidth=5):
         if figure is None:
             plt.figure()
         else:
@@ -550,7 +560,7 @@ class Controller():
         t = np.arange(0, self.T, self.dt) 
         energy = self.kinetic_energy_t.flatten()
 
-        plt.plot(t, energy, linewidth=5, color=color, label=name)
+        plt.plot(t, energy, linewidth=linewidth, color=color, label=name)
  
         plt.grid(True) 
         plt.xlabel('time [s]')
@@ -572,7 +582,7 @@ class Controller():
 
     #######################################################################################################################
 
-    def plot_potential_energy (self, show=True, save=False, figure=None, ylims=None, name = '', color='blue'):
+    def plot_potential_energy (self, show=True, save=False, figure=None, ylims=None, name = '', color='blue', linewidth=5):
         if figure is None:
             plt.figure()
         else:
@@ -581,7 +591,7 @@ class Controller():
         t = np.arange(0, self.T, self.dt) 
         energy = self.potential_energy_t.flatten()
 
-        plt.plot(t, energy, linewidth=5, color=color, label=name)
+        plt.plot(t, energy, linewidth=linewidth, color=color, label=name)
  
         plt.grid(True) 
         plt.xlabel('time [s]')
@@ -604,7 +614,7 @@ class Controller():
     
     #######################################################################################################################
 
-    def plot_total_energy_closeloop(self, show=True, save=False, figure=None, ylims=None, name = '', color='blue'):
+    def plot_total_energy_closeloop(self, show=True, save=False, figure=None, ylims=None, name = '', color='blue', linewidth=5):
         if figure is None:
             plt.figure()
         else:
@@ -613,7 +623,7 @@ class Controller():
         t = np.arange(0, self.T, self.dt) 
         energy = self.closeloop_total_energy_t.flatten() 
 
-        plt.plot(t, energy, linewidth=5, color=color, label=name)
+        plt.plot(t, energy, linewidth=linewidth, color=color, label=name)
  
         plt.grid() 
         plt.xlabel('time [s]')
@@ -636,7 +646,7 @@ class Controller():
 
     #######################################################################################################################
 
-    def plot_slack(self, show=True, save=False, figure=None, name = ''):
+    def plot_slack(self, show=True, save=False, figure=None, name = '', linewidth=5):
         if figure is None:
             plt.figure()
         else:
@@ -646,7 +656,7 @@ class Controller():
         slack = self.slackt.flatten()
 
         plt.grid() 
-        plt.plot(t, slack, linewidth=5, color='b')
+        plt.plot(t, slack, linewidth=linewidth, color='b')
         #plt.title('Slack')
         plt.ylabel('delta')
 
@@ -660,7 +670,7 @@ class Controller():
 
     #######################################################################################################################
 
-    def plot_clf(self, show=True, save=False, figure=None, ylims=None, name = '', color='blue'):
+    def plot_clf(self, show=True, save=False, figure=None, ylims=None, name = '', color='blue', linewidth=5):
         if figure is None:
             plt.figure()
         else:
@@ -669,7 +679,7 @@ class Controller():
         t = np.arange(0, self.T, self.dt)
         clf = self.clf_t.flatten()
 
-        plt.plot(t, clf, linewidth=5, color=color , label=name)
+        plt.plot(t, clf, linewidth=linewidth, color=color , label=name)
 
         #plt.title('clf')
         plt.grid(True)
@@ -691,7 +701,7 @@ class Controller():
 
     #######################################################################################################################
 
-    def plot_cbf(self, show=True, save=False, figure=None, ylims=None, name = '', color='blue'):
+    def plot_cbf(self, show=True, save=False, figure=None, ylims=None, name = '', color='blue', linewidth=5):
         if figure is None:
             plt.figure()
         else:
@@ -700,7 +710,7 @@ class Controller():
         t = np.arange(0, self.T, self.dt)
         cbf = self.cbf_t.flatten()
 
-        plt.plot(t, cbf, linewidth=5, color=color, label=name)
+        plt.plot(t, cbf, linewidth=linewidth, color=color, label=name)
 
         #plt.title('cbf')
         plt.grid(True)
@@ -723,7 +733,7 @@ class Controller():
 
     #######################################################################################################################
 
-    def plot_control(self, show=True, save=False, figure=None, name = '', color='blue', ylims=None):
+    def plot_control(self, show=True, save=False, figure=None, name = '', color='blue', ylims=None, linewidth=5):
         if figure is None:
             plt.figure()
         else:
@@ -737,12 +747,12 @@ class Controller():
         for i in range(self.num_inputs):
             control = self.ut[i]
             label = name if self.num_inputs == 1 else 'u'+str(i)+name 
-            plt.plot(t, control, linewidth=5, label=label, linestyle=linestyle[i], color=color)
+            plt.plot(t, control, linewidth=linewidth, label=label, linestyle=linestyle[i], color=color)
 
         u_max = self.parameter['u_max']
         if u_max is not None:
-            plt.plot(t, u_max * np.ones(t.shape[0]), 'k', linewidth=5, label='Bound', linestyle='--')
-            plt.plot(t, -u_max * np.ones(t.shape[0]), 'k', linewidth=5, linestyle='--') 
+            plt.plot(t, u_max * np.ones(t.shape[0]), 'k', linewidth=linewidth, label='Bound', linestyle='--')
+            plt.plot(t, -u_max * np.ones(t.shape[0]), 'k', linewidth=linewidth, linestyle='--') 
 
         plt.grid(True)
         #plt.title('control')
@@ -767,7 +777,7 @@ class Controller():
         
     #######################################################################################################################
 
-    def plot_cbf_constraint(self, show=True, save=False, figure=None, name = '', color='blue', ylims=None):
+    def plot_cbf_constraint(self, show=True, save=False, figure=None, name = '', color='blue', ylims=None, linewidth=5):
         if figure is None:
             plt.figure()
         else:
@@ -777,7 +787,7 @@ class Controller():
         constraint = self.cbf_ct.flatten()
 
         plt.grid() 
-        plt.plot(t, constraint, linewidth=5, label=name, linestyle='-', color=color) 
+        plt.plot(t, constraint, linewidth=linewidth, label=name, linestyle='-', color=color) 
 
         plt.grid(True)
         #plt.title('constraint')

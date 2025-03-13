@@ -150,25 +150,32 @@ def run_controller():
         switch_on = float(switch_on_step_value.get()),
         switch_off= float(switch_off_step_value.get())
     )
- 
+    
+    def viz(show=True, save=False, figure=None, color="blue", name = '', linewidth=8):
+        x = np.array(ctrl.xt)
+        traj_angles = [[x[0][i], x[1][i]] for i in range(x.shape[1])] 
+        model.visualize(traj_angles, skip=50, figure=figure, color="blue", show=show, save=save, name=name, linewidth=linewidth)
 
-    ctrl.show(
-        # ctrl.plot_phase_trajectory, 
-        # ctrl.plot_state,
+    ctrl.show( 
         ctrl.plot_total_energy ,
         ctrl.plot_kinetic_energy ,
         ctrl.plot_potential_energy ,
         ctrl.plot_cbf_constraint,
         ctrl.plot_control,
         ctrl.plot_cbf,
-        subplots=(3, 2)
+        ctrl.plot_state,
+        viz,
+        subplots=(3, 3),
+        linewidth=3,
     ) 
+ 
 
-    _, axs5 = plt.subplots(1, 1, figsize=(40, 25))
+    # _, ax = plt.subplots(1, 1, figsize=(40, 25))
 
-    x = np.array(ctrl.xt)
-    traj_angles = [[x[0][i], x[1][i]] for i in range(x.shape[1])] 
-    model.visualize(traj_angles, skip=50, figure=axs5, color="blue")
+    # x = np.array(ctrl.xt)
+    # traj_angles = [[x[0][i], x[1][i]] for i in range(x.shape[1])] 
+    # model.visualize(traj_angles, skip=50, figure=ax, color="blue")
+
  
 
 run_button = tk.Button(root, text="Run Controller", command=run_controller)
